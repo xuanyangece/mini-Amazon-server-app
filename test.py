@@ -7,7 +7,7 @@ listen_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 listen_socket.bind((HOST, PORT))
 listen_socket.listen(10)
 
-print ('Serving HTTP on port %s ...' % PORT)
+print ('Serving HTTP on port %s ....' % PORT)
 
 while True:
     client_connection, client_address = listen_socket.accept()

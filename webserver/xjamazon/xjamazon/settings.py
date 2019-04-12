@@ -20,12 +20,12 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # See https://docs.djangoproject.com/en/2.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = '7&o9y5-)8=#simp^0l@u0f91m&cb8nnqql2m5f@sk=)s)c2rt*'
+SECRET_KEY = '232(6-8$x4g5rf$^u#d**byp2k*%q$^oqpigahf@reoicg&z%!'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -75,8 +75,12 @@ WSGI_APPLICATION = 'xjamazon.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'scmiwlgi',
+        'USER': 'scmiwlgi',
+        'PASSWORD': 'TFP9YRYa1EmcciYEEBqsAsrSq9O9qiWV',
+        'HOST': 'isilo.db.elephantsql.com',
+        'PORT': '5432'
     }
 }
 

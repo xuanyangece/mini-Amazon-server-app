@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Homepage</title>
+</head>
+<body>
+    {% block content %}
+    <h1>Welcome to MINI Amazon by Xuan and Jie!</h1>
+    <a href="{% url 'webserver:buy' %}">Purchase an item now!</a>
+    {% endblock %}
+</body>
+</html>

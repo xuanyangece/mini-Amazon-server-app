@@ -1,6 +1,6 @@
 import socket
 
-HOST, PORT = socket.gethostbyname(socket.gethostname()), 23456
+HOST, PORT = socket.gethostbyname(socket.gethostname()), 65432
 
 listen_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 listen_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -17,8 +17,3 @@ while True:
     http_response = "HTTP/1.1 200 OK\n\nHello World!\n"
     client_connection.sendall(http_response.encode('utf-8'))
     client_connection.close()
-
-<<<<<<< HEAD
-    
-=======
->>>>>>> master

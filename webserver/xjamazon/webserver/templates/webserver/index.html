@@ -7,7 +7,10 @@
 <body>
     {% block content %}
     <h1>Welcome to MINI Amazon by Xuan and Jie!</h1>
-    <a href="{% url 'webserver:buy' %}">Purchase an item now!</a>
+    <h3>Amazon Admin</h3>
+    <a href="{% url 'webserver:getProduct' %}">Get the product to make some MONEY.</a>
+    <h3>Amazon User</h3>
+    <p>Some links for users</p>
     {% endblock %}
 </body>
 </html>

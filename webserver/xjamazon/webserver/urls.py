@@ -2,6 +2,9 @@ from django.urls import path
 
 from . import views
 
+app_name = 'webserver'
+
 urlpatterns = [
-    path('', views.index, name='index'),
+    path('homepage/', views.homepage, name='homepage'),
+    path('getProduct/', views.getProduct, name='getProduct'),
 ]

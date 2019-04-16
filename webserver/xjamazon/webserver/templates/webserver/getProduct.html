@@ -2,11 +2,12 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Buy Item</title>
+    <title>Get Product</title>
 </head>
 <body>
     {% block content %}
-    <h2>Welcome to MINI Amazon by Xuan and Jie!</h1>
+    <h2>Welcome to MINI Amazon by Xuan and Jie!</h2>
+    <h4>Get product for warehouse</h4>
     <div class="form-wrapper">
         <form method="POST" action="" enctype="multipart/form-data">
             {% csrf_token %}
@@ -19,9 +20,9 @@
                 {% endif %}
             </div>
             {% endfor %}
-            <div class="button-wrapper submit"><input type="submit" value="Buy now!"></div>
+            <div class="button-wrapper submit"><input type="submit" value="Get this product"></div>
         </form>
-        <a href="{% url 'buy:'}">Back to homepage</a>
+        <a href="/webserver/homepage">Back to homepage</a>
     </div>
     {% endblock %}
 </body>

@@ -1,5 +1,0 @@
-from django import forms
-
-def BuyForm(forms.Form):
-    item_id = forms.CharField(label='ItemID', max_length=10)
-    ups_name = forms.CharField(label='UPSname', max_length=30)

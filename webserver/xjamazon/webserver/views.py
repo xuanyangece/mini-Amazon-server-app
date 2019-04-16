@@ -1,7 +1,6 @@
 from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponseRedirect, HttpResponse
-from .models import Item
-from .forms import BuyForm
+from .forms import GetProductForm
 
 import xml.dom.minidom as minidom
 import xml.etree.ElementTree as ET
@@ -23,36 +22,28 @@ def prettify(elem):
 def homepage(request):
     return render(request, 'webserver/index.html', {})
 
-# buy page
-def buy(request):
+# getProduct page
+def getProduct(request):
     if request.method == 'POST':
-        form = BuyForm(request.POST)
+        form = GetProductForm(request.POST)
         if form.is_valid():
             item_id = form.cleaned_data['item_id']
-            ups_name = form.cleaned_data['ups_name']
             description = form.cleaned_data['description']
             count = form.cleaned_data['count']
-            address = form.cleaned_data['address']
 
             # generate XML
-            buyXML = ET.Element('buy')
+            getProductXML = ET.Element('getProduct')
 
-            itemXML = ET.SubElement(buyXML, 'item_id')
+            itemXML = ET.SubElement(getProductXML, 'item_id')
             itemXML.text = item_id
 
-            upsXML = ET.SubElement(buyXML, 'ups_name')
-            upsXML.text = ups_name
-
-            descpXML = ET.SubElement(buyXML, 'description')
+            descpXML = ET.SubElement(getProductXML, 'description')
             descpXML.text = description
 
-            countXML = ET.SubElement(buyXML, 'count')
+            countXML = ET.SubElement(getProductXML, 'count')
             countXML.text = str(count)
 
-            addXML = ET.SubElement(buyXML, 'address')
-            addXML.text = address
-
-            buyRequest = prettify(buyXML)
+            getProductRequest = prettify(getProductXML)
     
             # send order info to app server
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -62,6 +53,6 @@ def buy(request):
             return HttpResponseRedirect("/webserver/")
 
     else:
-        form = BuyForm()
+        form = GetProductForm()
 
-    return render(request, 'webserver/buy.html', {'form': form})
+    return render(request, 'webserver/getProduct.html', {'form': form})

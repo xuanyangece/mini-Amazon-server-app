@@ -6,5 +6,5 @@ app_name = 'webserver'
 
 urlpatterns = [
     path('homepage/', views.homepage, name='homepage'),
-    path('buy/', views.buy, name='buy'),
+    path('getProduct/', views.getProduct, name='getProduct'),
 ]

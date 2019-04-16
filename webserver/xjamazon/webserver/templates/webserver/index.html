@@ -1,16 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+  <head>
     <meta charset="UTF-8">
     <title>Homepage</title>
-</head>
-<body>
+  </head>
+  <body>
     {% block content %}
     <h1>Welcome to MINI Amazon by Xuan and Jie!</h1>
     <h3>Amazon Admin</h3>
+    <a href="{% url 'webserver:createWarehouse' %}">Create new warehouse in World.</a>
     <a href="{% url 'webserver:getProduct' %}">Get the product to make some MONEY.</a>
     <h3>Amazon User</h3>
-    <p>Some links for users</p>
+    <a href="{% url 'webserver:buyProduct' %}">Buy some product.</a>
     {% endblock %}
-</body>
-</html>
+  </body>
+  </html>1;95;0c

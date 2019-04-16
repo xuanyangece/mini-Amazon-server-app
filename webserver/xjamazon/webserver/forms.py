@@ -13,3 +13,7 @@ class BuyProductForm(forms.Form):
     count = forms.IntegerField(label='Count', validators=[MaxValueValidator(999999),MinValueValidator(1)])
     x = forms.IntegerField(label='x')
     y = forms.IntegerField(label='y')
+
+class WarehouseForm(forms.Form):
+    x = forms.IntegerField(label='x')
+    y = forms.IntegerField(label='y')

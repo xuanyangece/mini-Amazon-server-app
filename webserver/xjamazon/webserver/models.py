@@ -13,3 +13,7 @@ class BuyProduct(models.Model):
     count = models.IntegerField(default=1, validators=[MaxValueValidator(999999),MinValueValidator(1)])
     x = models.IntegerField(default=1)
     y = models.IntegerField(default=1)
+
+class Warehouse(models.Model):
+    x = models.IntegerField(default=1)
+    y = models.IntegerField(default=1)

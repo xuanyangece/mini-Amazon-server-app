@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Create Warehouse</title>
+</head>
+<body>
+    {% block content %}
+    <h2>Welcome to MINI Amazon by Xuan and Jie!</h2>
+    <h4>Create new warehouse in World</h4>
+    <div class="form-wrapper">
+        <form method="POST" action="" enctype="multipart/form-data">
+            {% csrf_token %}
+            {% for field in form %}
+            <div class="field-wrapper">
+                {{ field.errors }}
+                {{ field.label_tag }} {{ field }}
+                {% if field.help_text %}
+                    {{ field.help_text|safe }}
+                {% endif %}
+            </div>
+            {% endfor %}
+            <div class="button-wrapper submit"><input type="submit" value="Create warehouse"></div>
+        </form>
+        <a href="/webserver/homepage">Back to homepage</a>
+    </div>
+    {% endblock %}
+</body>
+</html>

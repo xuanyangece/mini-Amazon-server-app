@@ -1,7 +1,10 @@
 import socket
 from xml.sax import make_parser, parseString
 from xml.sax.handler import ContentHandler
+<<<<<<< HEAD
 import threading
+=======
+>>>>>>> 8fcb13e19aa3a3946db0e54e014066ef21dedf0e
 import amazon_pb2
 
 from google.protobuf.internal.decoder import _DecodeVarint32
@@ -10,6 +13,7 @@ from google.protobuf.internal.encoder import _EncodeVarint
 #host, port for connecting with world
 WHOST, WPORT = "vcm-8965.vm.duke.edu", 23456
 
+<<<<<<< HEAD
 Warehouse_id = 1
 ship_id = 1
 seqnum = 1
@@ -24,6 +28,8 @@ def uni_int(msg):
     res = int(s_mess)
     return res
 
+=======
+>>>>>>> 8fcb13e19aa3a3946db0e54e014066ef21dedf0e
 
 def send_message(socket, msg):
     hdr = []
@@ -48,6 +54,7 @@ def recv_message(socket):
 
 
 
+<<<<<<< HEAD
 def createWorld(s):
 
     worldCreate = amazon_pb2.AConnect()
@@ -61,6 +68,15 @@ def createWorld(s):
     #wh2.id = 2
     #wh2.x = 2
     #wh2.y = 3
+=======
+def createWorld():
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    world_server_ip = socket.gethostbyname(WHOST)
+    s.connect((world_server_ip, WPORT))
+
+    worldCreate = amazon_pb2.AConnect()
+    worldCreate.isAmazon = True
+>>>>>>> 8fcb13e19aa3a3946db0e54e014066ef21dedf0e
 
     send_message(s, worldCreate)
 
@@ -79,6 +95,7 @@ def createWorld(s):
     print("\n")
 
 
+<<<<<<< HEAD
 def createWarehouse(s, msg):
     send_message(s, msg)
 
@@ -100,6 +117,12 @@ def sendtoWorld(s):
     global ourorderList
     global seqnum
     print("hahahahahahah")
+=======
+
+
+
+def sendtoWorld():
+>>>>>>> 8fcb13e19aa3a3946db0e54e014066ef21dedf0e
     HOST, PORT = socket.gethostbyname(socket.gethostname()), 65432
 
     listen_socket_web = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -117,6 +140,7 @@ def sendtoWorld(s):
         Handler = web_requestHandler()
         parseString(xml_request, Handler)
 
+<<<<<<< HEAD
 #        if Handler.commandtype == "getProduct":
 #        s_command = amazon_pb2.AProduct()
 #           s_command.id = Handler.itemid
@@ -147,6 +171,8 @@ def sendtoWorld(s):
 
 
 
+=======
+>>>>>>> 8fcb13e19aa3a3946db0e54e014066ef21dedf0e
        # newproduct = amazon_pb2.AProduct()
        # newproduct.id = Handler.itemid
        # newproduct.description = Handler.description
@@ -164,6 +190,7 @@ def sendtoWorld(s):
 
 
 
+<<<<<<< HEAD
 def recvfromWorld(s):
 
     global ship_id
@@ -206,6 +233,22 @@ def recvfromWorld(s):
 
 
 
+=======
+def recvfromWorld():
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    world_server_ip = socket.gethostbyname(WHOST)
+    s.connect((world_server_ip, WPORT))
+
+    var_int_buff = []
+    while True:
+        buf = s.recv(1)
+        var_int_buff += buf
+        msg_len, new_pos = _DecodeVarint32(var_int_buff,0)
+        if new_pos != 0:
+            break
+    whole_message = s.recv(msg_len)
+    ourresponse = amazon_pb2.AResponses()
+>>>>>>> 8fcb13e19aa3a3946db0e54e014066ef21dedf0e
 
 
 
@@ -223,8 +266,11 @@ class web_requestHandler(ContentHandler) :
         self.count = ""
         self.address_X = ""
         self.address_Y = ""
+<<<<<<< HEAD
         self.worldid = ""
         self.wareid = ""
+=======
+>>>>>>> 8fcb13e19aa3a3946db0e54e014066ef21dedf0e
 
 
     def startElement(self, tag, attributes):
@@ -252,10 +298,13 @@ class web_requestHandler(ContentHandler) :
             print(self.address_X)
         elif self.CurrentData == "y":
             print(self.address_Y)
+<<<<<<< HEAD
         elif self.CurrentData == "worldID":
             print(self.worldid)
         elif self.CurrentData == "whID":
             print(self.wareid)
+=======
+>>>>>>> 8fcb13e19aa3a3946db0e54e014066ef21dedf0e
         self.CurrentData = ""
 
     def characters(self, content):
@@ -271,10 +320,13 @@ class web_requestHandler(ContentHandler) :
             self.address_X = content
         elif self.CurrentData == "y":
             self.address_Y =  content
+<<<<<<< HEAD
         elif self.CurrentData == "worldID":
             self.worldid = content
         elif self.CurrentData == "whID":
             self.wareid = content
+=======
+>>>>>>> 8fcb13e19aa3a3946db0e54e014066ef21dedf0e
 
 
 
@@ -282,12 +334,18 @@ class web_requestHandler(ContentHandler) :
 
 
 if __name__ == '__main__':
+<<<<<<< HEAD
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     world_server_ip = socket.gethostbyname(WHOST)
     s.connect((world_server_ip, WPORT))
 
     createWorld(s)
+=======
+     #createWorld()
+     while True:
+      sendtoWorld()
+>>>>>>> 8fcb13e19aa3a3946db0e54e014066ef21dedf0e
 
     my_thread1 = threading.Thread(target = sendtoWorld, args=(s,))
     my_thread2 = threading.Thread(target = recvfromWorld, args=(s,))

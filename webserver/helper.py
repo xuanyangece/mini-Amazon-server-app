@@ -1,6 +1,13 @@
 import xml.dom.minidom as minidom
 import xml.etree.ElementTree as ET
+import socket
+import select
 
+WorldMessage = ["MMP"]
+
+UPSMessage = ["RNM"]
+
+UPSHOST, UPSPORT = "vcm-xxxx.vm.duke.edu", 41414
 
 # helper function for prettify XML from https://stackoverflow.com/questions/17402323/use-xml-etree-elementtree-to-print-nicely-formatted-xml-files
 def prettify(elem):
@@ -17,6 +24,71 @@ def goDeliverXML(truckID):
     str += "</goDeliver>\n"
 
     return str.encode('utf-8')
+
+
+def handleUPS():
+    global UPSHOST
+    global UPSPORT
+    # poll to check whether there's remaining commands in UPSMessage
+    while True:
+        global UPSMessage
+        # not empty: handle!
+        if (len(UPSMessage) != 0):
+            # extra info from UPSMessage
+            message = UPSMessage[0]
+
+            # send UPSMessage info to UPS
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            app_server_ip = socket.gethostbyname(UPSHOST)
+            s.connect((app_server_ip, UPSPORT))
+            s.sendall(message.encode('utf-8'))
+
+            # recv, ACK/handle and add
+            s.setblocking(0)
+            timeout = 60 * 1
+            ready = select.select([s], [], [], timeout)
+            if ready[0]:
+                # pop out UPSMessage
+                UPSMessage.pop(0)
+                # receive result
+                data = s.recv(10240)
+                # parse data and do something
+                data = str(data)
+                if data.find("goLoad") != -1:
+                    # send load to world
+                    data.find("id")
+                    # map from truck id to multiple packageid
+                    # map each packageid to (wh, truck, packageid)->world
+                    # possibly put truck id in it
+                    # move this to WorldMessage
+            
+        else:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            app_server_ip = socket.gethostbyname(UPSHOST)
+            s.connect((app_server_ip, UPSPORT))
+            
+            # recv, ACK/handle and add
+            s.setblocking(0)
+            timeout = 20 * 1
+            ready = select.select([s], [], [], timeout)
+
+            if ready[0]:
+                # receive result
+                data = s.recv(10240)
+                # parse data and do something
+                data = str(data)
+                if data.find("goLoad") != -1:
+                    # send load to world
+                    data.find("id")
+                    # map from truck id to multiple packageid
+                    # map each packageid to (wh, truck, packageid)->world
+                    # possibly put truck id in it
+                    # move this to WorldMessage
+
+
+
+
+
 
 class Item:
     def __init__(self, name, quantity, description):

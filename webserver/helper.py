@@ -55,6 +55,55 @@ def goDeliverXML(truckID):
 
     return str.encode('utf-8')
 
+# receive from UPS
+def recvUPS(s, timeout):
+    ready = select.select([s], [], [], timeout)
+    if ready[0]:
+        # pop out UPSMessage
+        UPSMessage.pop(0)
+        # receive result
+        data = s.recv(10240)
+        # parse data and do something
+        data = str(data)
+        print("*******From UPS*******\n")
+        print(data)
+
+        if data.find("goLoad") != -1:
+            # parse get truck id
+            Handler = TruckHandler() # only use Truck id in it
+            xml.sax.parseString(data, Handler)
+            tid = Handler.truckID
+
+            # find each package in ship_truckMap
+            for pkgid in ship_truckMap:
+                pot = ship_truckMap[pkgid]
+                # check whether truck id applies to goLoad
+                for x in pot.load:
+                    if str(x.truckid) != str(tid):
+                        continue
+                    # move add pot to send list
+                    WorldMessage.append(pot)
+                    # remove pot from dict
+                    ship_truckMap.pop(pkgid)
+
+        elif data.find("reqTruck") != -1:
+            # parse
+            Handler = TruckHandler()
+            xml.sax.parseString(data, Handler)
+
+            # map from truck id to multiple packageid
+            tid = Handler.truckID
+            pkgids = Handler.packageID
+
+            # update pot for each pkgid
+            for pkgid in pkgids:
+                # get the pot & update
+                pot = ship_truckMap[pkgid]
+                for x in pot.load:
+                    x.truckid = tid
+
+                # final update
+                ship_truckMap[pkgid] = pot
 
 def handleUPS():
     global UPSHOST
@@ -76,53 +125,7 @@ def handleUPS():
             # recv, ACK/handle and add
             s.setblocking(0)
             timeout = 60 * 1
-            ready = select.select([s], [], [], timeout)
-            if ready[0]:
-                # pop out UPSMessage
-                UPSMessage.pop(0)
-                # receive result
-                data = s.recv(10240)
-                # parse data and do something
-                data = str(data)
-                print("*******From UPS*******\n")
-                print(data)
-
-                if data.find("goLoad") != -1:
-                    # parse get truck id
-                    Handler = TruckHandler() # only use Truck id in it
-                    xml.sax.parseString(data, Handler)
-                    tid = Handler.truckID
-
-                    # find each package in ship_truckMap
-                    for pkgid in ship_truckMap:
-                        pot = ship_truckMap[pkgid]
-                        # check whether truck id applies to goLoad
-                        for x in pot.load:
-                            if str(x.truckid) != str(tid):
-                                continue
-                            # move add pot to send list
-                            WorldMessage.append(pot)
-                            # remove pot from dict
-                            ship_truckMap.pop(pkgid)
-
-                elif data.find("reqTruck") != -1:
-                    # parse
-                    Handler = TruckHandler()
-                    xml.sax.parseString(data, Handler)
-
-                    # map from truck id to multiple packageid
-                    tid = Handler.truckID
-                    pkgids = Handler.packageID
-
-                    # update pot for each pkgid
-                    for pkgid in pkgids:
-                        # get the pot & update
-                        pot = ship_truckMap[pkgid]
-                        for x in pot.load:
-                            x.truckid = tid
-
-                        # final update
-                        ship_truckMap[pkgid] = pot
+            recvUPS(s, timeout)
             
         else:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -132,53 +135,7 @@ def handleUPS():
             # recv, ACK/handle and add
             s.setblocking(0)
             timeout = 20 * 1
-            ready = select.select([s], [], [], timeout)
-
-            if ready[0]:
-                # receive result
-                data = s.recv(10240)
-                # parse data and do something
-                data = str(data)
-                print("*******From UPS*******\n")
-                print(data)
-                if data.find("goLoad") != -1:
-                    # parse get truck id
-                    Handler = TruckHandler() # only use Truck id in it
-                    xml.sax.parseString(data, Handler)
-                    tid = Handler.truckID
-
-                    # find each package in ship_truckMap
-                    for pkgid in ship_truckMap:
-                        pot = ship_truckMap[pkgid]
-                        # check whether truck id applies to goLoad
-                        for x in pot.load:
-                            if str(x.truckid) != str(tid):
-                                continue
-                            # move add pot to send list
-                            WorldMessage.append(pot)
-                            # remove pot from dict
-                            ship_truckMap.pop(pkgid)
-
-                elif data.find("reqTruck") != -1:
-                    # parse
-                    Handler = TruckHandler()
-                    xml.sax.parseString(data, Handler)
-
-                    # map from truck id to multiple packageid
-                    tid = Handler.truckID
-                    pkgids = Handler.packageID
-
-                    # update pot for each pkgid
-                    for pkgid in pkgids:
-                        # get the pot & update
-                        pot = ship_truckMap[pkgid]
-                        for x in pot.load:
-                            x.truckid = tid
-
-                        # final update
-                        ship_truckMap[pkgid] = pot
-
-
+            recvUPS(s, timeout)
 
 
 

@@ -17,16 +17,31 @@ HOST, PORT = socket.gethostbyname(socket.gethostname()), 65432
 # host, port for connecting with world
 WHOST, WPORT = "vcm-8513.vm.duke.edu", 23456
 
+#global variable used for create unique warehouseid shipid sequm and orderid
 Warehouse_id = 1
 ship_id = 1
 order_id = 1000
 seqnum = 1
+
+#store <sequm, Acommand> pair
 WorldMessage = dict()
+
+#the only one socket used to communicate with world
 socketonly = -1
-putontruk_WL = []
+
+#store the the Aputontruck command at eariler stage
+putontruck_WL = []
+
+#store <ship_id, putontructcommand> for UPShandle
 ship_truckMap = dict()
+
+#store all the order after receive from amazonweb
 orderList = []
+
+#store all the messgae need to send to UPS
 UPSMessage = []
+
+#used to find all package on truck by truck_id
 truck_packageMap = dict()
 
 
@@ -34,12 +49,14 @@ truck_packageMap = dict()
 UPSHOST, UPSPORTR, UPSPORTS = "vcm-8513.vm.duke.edu", 12346, 12347
 
 
+#product info
 class Item:
     def __init__(self, name, quantity, description):
         self.name = str(name)
         self.quantity = str(quantity)
         self.description = str(description)
 
+#package info
 class Package:
     def __init__(self, id, x, y, upsname, items):
         self.id = str(id)
@@ -48,6 +65,7 @@ class Package:
         self.upsname = str(upsname)
         self.items = items
 
+#used to create reqtruck message
 def reqTruckXML(orderID, whID, packages):
     strXML = "<reqTruck>\n\t"
     strXML += "<Order id=\"" + str(orderID) + "\"/>\n\t"
@@ -76,6 +94,7 @@ def reqTruckXML(orderID, whID, packages):
 
 
 
+#function used to parsing the truck XML info from UPS
 class TruckHandler(xml.sax.ContentHandler):
     def __init__(self):
         self.CurrentData = ""
@@ -110,6 +129,7 @@ def prettify(elem):
     return reparsed.toprettyxml(indent="\t")
 
 
+#used to create the goDeliver command for UPS
 def goDeliverXML(truckID):
     str1 = "<goDeliver>\n\t<Truck id=\""
     str1 += truckID + "\"/>\n"
@@ -208,13 +228,14 @@ def uni_int(msg):
     return res
 
 
+#used to send and recv google protocol message with world
 def send_message(socket, msg):
     hdr = []
     _EncodeVarint(hdr.append, len(msg.SerializeToString()))
     socket.sendall("".join(hdr))
     socket.sendall(msg.SerializeToString())
 
-
+#recv with timeout
 def recv_tmessage(socket, timeout):
     var_int_buff = []
     ready = select.select([socket], [], [], timeout)
@@ -230,7 +251,7 @@ def recv_tmessage(socket, timeout):
     return ""
 
 
-
+#normal recv
 def recv_message(socket):
     var_int_buff = []
     while True:
@@ -243,7 +264,7 @@ def recv_message(socket):
     return whole_message
 
 
-
+#used to connect world and initial the warehouse
 def connectWorld(worldconnect):
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -269,42 +290,17 @@ def connectWorld(worldconnect):
     return s
 
 
-def commuWorld(msg,siganl):
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    world_server_ip = socket.gethostbyname(WHOST)
-    s.connect((world_server_ip, WPORT))
-    flag = 0
-
-    while flag == 0:
-        send_message(s,msg)
-        flag = recvfromWorld(s,siganl)
-
-
-
-def createWarehouse(s, msg):
-    send_message(s, msg)
-
-    connectResponse = amazon_pb2.AConnected()
-    connectResponse.ParseFromString(recv_message(s))
-
-    print("Worldid: ")
-    print(connectResponse.worldid)
-    print("\n")
-
-    print("Result: ")
-    print(connectResponse.result)
-    print("\n")
-
-    return
-
-
-def sendtoWorld(s):
-    global ourorderList
-    global seqnum
+def  ack_to_world(s, ack):
+    ackcommand = amazon_pb2.ACommands()
+    ackcommand.acks.extend(ack)
+    send_message(s, ackcommand)
 
 
 
 
+
+
+#used to send and handle commands and response to/from world
 def worldServer(s):
     timeout = 1
     global seqnum
@@ -341,10 +337,12 @@ def worldServer(s):
                 print(errors.err)
                 print("error orginsequm:" + str(errors.originseqnum))
                 print(errors.seqnum)
+                ack_to_world(s, errors.seqnum)
 
         #recv purchaseMore and create topack
         if len(worldResponse.arrived) > 0:
             for arrive in worldResponse.arrived:
+                ack_to_world(s, arrive.seqnum)
                 s_command = amazon_pb2.ACommands()
                 apack = s_command.topack.add()
                 apack.whnum = arrive.whnum
@@ -388,24 +386,30 @@ def worldServer(s):
                 truck = truck_command.load.add()
                 truck.whnum = arrive.whnum
                 truck.shipid = apack.shipid
-                putontruk_WL.append(truck_command)
+                putontruck_WL.append(truck_command)
                 #recev packed and create put on truck
+
+
         if len(worldResponse.ready) > 0:
             for packed in worldResponse.ready:
+                ack_to_world(s, packed.seqnum)
                 print("ready shipid:" + str(packed.shipid))
                 print("ready seqnum:" + str(packed.seqnum))
-                for pot in putontruk_WL:
+                for pot in putontruck_WL:
                     if pot.load[0].shipid == packed.shipid:
                         ship_truckMap[pot.load[0].shipid] = pot
-                        putontruk_WL.remove(pot)
+                        putontruck_WL.remove(pot)
                         print("received ready")
 
+        if len(worldResponse.loaded) > 0:
+            for load in worldResponse.loaded:
+                send_message(s, load.seqnum)
+                for key in truck_packageMap.keys():
+                    for pakid in truck_packageMap[key]:
+                        if pakid == load.shipid:
+                            pakid.remove(pakid)
 
-
-
-
-
-
+#recv and handle all the message from amazonweb
 def amazonWeb(listen_socket_web):
     global seqnum
     global order_id
@@ -446,59 +450,7 @@ def amazonWeb(listen_socket_web):
 
 
 
-
-
-
-def recvfromWorld(s,signal):
-
-    global ship_id
-    global seqnum
-    print("hhhhh")
-
-    while True:
-        worldResponse = amazon_pb2.AResponses()
-        worldResponse.ParseFromString(recv_message(s))
-
-
-        if worldResponse.error:
-            print("Error: ")
-            print(worldResponse.error.err)
-
-        if worldResponse.arrived:
-            print("purchaseMore: ")
-            print(worldResponse.arrived.whnum)
-            print(worldResponse.arrived.seqnum)
-            s_command1 = amazon_pb2.ACommands()
-            pack = s_command1.topack.add()
-            pack.whnum = worldResponse.arrived.whnum
-            thing = pack.things.add()
-            thing.id = worldResponse.arrived.things
-
-
-
-        if worldResponse.ready:
-            print("Packed: ")
-            print(worldResponse.ready.shipid)
-            print(worldResponse.ready.seqnum)
-
-        for i in worldResponse.acks:
-            if i == signal:
-                return i
-            else:
-                return 0
-
-
-
-
-
-
-
-
-
-
-
-
-
+#Parsing all the xml message from amazon web
 class web_requestHandler(ContentHandler) :
     def __init__(self):
         self.CurrentData = ""
@@ -565,6 +517,7 @@ class web_requestHandler(ContentHandler) :
             self.wareid = content
 
 
+#parsing the Worldid xml message from ups
 class WorldIDHandler(ContentHandler):
     def __init__(self):
         self.CurrentData = ""

@@ -56,16 +56,16 @@ def reqTruckXML(orderID, whID, packages):
 
     # traverse packages
     for pkg in packages:
-        strXML += "\t\t<Package id=\"" + pkg.id + "\">\n"
+        strXML += "\t<Package id=\"" + pkg.id + "\">\n"
 
-        strXML += "\t\t\t<destination X=\"" + pkg.x + "\" Y=\"" + pkg.y + "\"/>\n"
-        strXML += "\t\t\t<UPS username=\"" + pkg.upsname + "\"/>\n"
+        strXML += "\t\t<destination X=\"" + pkg.x + "\" Y=\"" + pkg.y + "\"/>\n"
+        strXML += "\t\t<UPS username=\"" + pkg.upsname + "\">\n"
         #strXML += "\t\t\t<items>\n"
 
         for item in pkg.items:
-            strXML += "\t\t\t\t<item name=\"" + item.name + "\" quantity=\"" + item.quantity + "\" description=\""
+            strXML += "\t\t\t<item name=\"" + item.name + "\" quantity=\"" + item.quantity + "\" description=\""
             strXML += item.description + "\"/>\n"
-
+        strXML += "\t\t</UPS>\n"
         strXML += "\t\t</Package>\n"
 
     #strXML += "\t</Packages>\n"

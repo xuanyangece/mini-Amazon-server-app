@@ -15,7 +15,6 @@ class BuyProduct(models.Model):
     y = models.IntegerField(default=1)
 
 class Warehouse(models.Model):
-    worldID = models.CharField(max_length=20)
     whID = models.CharField(max_length=20)
     x = models.IntegerField(default=1)
     y = models.IntegerField(default=1)

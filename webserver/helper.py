@@ -182,12 +182,11 @@ def reqTruckXML(orderID, whID, packages):
 
 
 items1 = []
-items1.append(Item("1", 10, "AI"))
-items1.append(Item("2", 5, "ML"))
+items1.append(Item("123", 2, ""))
 
 packages1 = []
-packages1.append(Package(1, 3, 5, "myUPS", items1))
+packages1.append(Package(1, 3, 5, "Jie", items1))
 
 #print(goDeliverXML("1314"))
 
-print(reqTruckXML(99, 88, packages1))
+print(reqTruckXML(1, 1, packages1))

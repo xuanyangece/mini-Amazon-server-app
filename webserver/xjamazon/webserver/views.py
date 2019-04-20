@@ -111,16 +111,12 @@ def createWarehouse(request):
     if request.method == 'POST':
         form = WarehouseForm(request.POST)
         if form.is_valid():
-            worldID = form.cleaned_data['worldID']
             whID = form.cleaned_data['whID']
             x = form.cleaned_data['x']
             y = form.cleaned_data['y']
 
             # generate XML
             newWHXML = ET.Element('createWarehouse')
-
-            worldXML = ET.SubElement(newWHXML, 'worldID')
-            worldXML.text = worldID
 
             whIDXML = ET.SubElement(newWHXML, 'whID')
             whIDXML.text = whID

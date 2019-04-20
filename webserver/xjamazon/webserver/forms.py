@@ -15,7 +15,6 @@ class BuyProductForm(forms.Form):
     y = forms.IntegerField(label='y')
 
 class WarehouseForm(forms.Form):
-    worldID = forms.CharField(label='World ID', max_length=20)
     whID = forms.CharField(label='Warehouse ID', max_length=20)
     x = forms.IntegerField(label='x')
     y = forms.IntegerField(label='y')

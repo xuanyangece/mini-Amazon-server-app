@@ -11,6 +11,9 @@ import select
 from google.protobuf.internal.decoder import _DecodeVarint32
 from google.protobuf.internal.encoder import _EncodeVarint
 
+# this host and port for amazon
+HOST, PORT = socket.gethostbyname(socket.gethostname()), 65432
+
 # host, port for connecting with world
 WHOST, WPORT = "vcm-8513.vm.duke.edu", 23456
 
@@ -28,7 +31,7 @@ truck_packageMap = dict()
 
 
 # host for UPS
-UPSHOST, UPSPORT = "vcm-8513.vm.duke.edu", 12346
+UPSHOST, UPSPORTR, UPSPORTS = "vcm-8513.vm.duke.edu", 12346, 12347
 
 
 class Item:
@@ -48,8 +51,8 @@ class Package:
 def reqTruckXML(orderID, whID, packages):
     strXML = "<reqTruck>\n\t"
     strXML += "<Order id=\"" + str(orderID) + "\"/>\n\t"
-    strXML += "<Warehouse id=\"" + str(whID) + "\"/>\n\t"
-    strXML += "<Packages>\n"
+    strXML += "<Warehouse id=\"" + str(whID) + "\"/>\n"
+    # strXML += "<Packages>\n"
 
     # traverse packages
     for pkg in packages:
@@ -57,15 +60,15 @@ def reqTruckXML(orderID, whID, packages):
 
         strXML += "\t\t\t<destination X=\"" + pkg.x + "\" Y=\"" + pkg.y + "\"/>\n"
         strXML += "\t\t\t<UPS username=\"" + pkg.upsname + "\"/>\n"
-        strXML += "\t\t\t<items>\n"
+        #strXML += "\t\t\t<items>\n"
 
         for item in pkg.items:
             strXML += "\t\t\t\t<item name=\"" + item.name + "\" quantity=\"" + item.quantity + "\" description=\""
             strXML += item.description + "\"/>\n"
 
-        strXML += "\t\t<Package>\n"
+        strXML += "\t\t</Package>\n"
 
-    strXML += "\t</Packages>\n"
+    #strXML += "\t</Packages>\n"
     strXML += "</reqTruck>\n"
 
     strXML = str(len(strXML)) + '\n' + strXML
@@ -169,31 +172,28 @@ def recvUPS(s):
 
 def handleUPS():
     global UPSHOST
-    global UPSPORT
+    global UPSPORTS
     # poll to check whether there's remaining commands in UPSMessage
     while True:
         global UPSMessage
         # not empty: handle!
         if (len(UPSMessage) != 0):
             # extra info from UPSMessage
-            message = UPSMessage[0]
+            message = UPSMessage.pop(0)
 
             # send UPSMessage info to UPS
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            app_server_ip = socket.gethostbyname(UPSHOST)
-            s.connect((app_server_ip, UPSPORT))
+            s.connect((UPSHOST, UPSPORTS))
+
             s.sendall(message.encode('utf-8'))
 
 
-def handleUPS2():
-    global UPSPORT
-    s_recv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s_recv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    s_recv.bind((HOST, UPSPORT))
-
+def handleUPS2(s_recv):
+    global UPSPORTR
     while True:
         s_connection, s_address = s_recv.accept()
         recvUPS(s_connection)
+        s_connection.close()
 
 
 
@@ -312,7 +312,15 @@ def worldServer(s):
     while True:
         if(len(WorldMessage) > 0):
             for key in WorldMessage.keys():
+                print("key:"+ str(key))
                 send_message(s, WorldMessage[key])
+                '''
+                one time 
+                one time 
+                one time 
+                one time     
+                '''
+                WorldMessage.pop(key)
 
         worldResponse = amazon_pb2.AResponses()
         msg =  recv_tmessage(s, timeout)
@@ -331,7 +339,7 @@ def worldServer(s):
         if len(worldResponse.error) > 0:
             for errors in worldResponse.error:
                 print(errors.err)
-                print(errors.originseqnum)
+                print("error orginsequm:" + str(errors.originseqnum))
                 print(errors.seqnum)
 
         #recv purchaseMore and create topack
@@ -344,27 +352,38 @@ def worldServer(s):
                 seqnum = seqnum + 1
                 apack.shipid = ship_id
                 ship_id = ship_id + 1
+                print("**************arrived*************")
                 print(arrive.whnum)
-                for product in arrive:
-                    print(product.id)
-                    print(product.description)
-                    print(product.count)
+                for product in arrive.things:
+                    print("Product id: " + str(product.id))
+                    print("Product description: " + str(product.description))
+                    print("Product count: " + str(product.count))
+
                     sproduct = apack.things.add()
                     sproduct.id = product.id
                     sproduct.description = product.description
                     sproduct.count =  product.count
+
                     for order  in orderList:
-                        if order.itemid == sproduct.id and order.description == sproduct.description and order.count == sproduct.count:
+                        print("current order id: " + str(order.itemid))
+                        print("current order description: " + str(order.description))
+                        print("current order count: " + str(order.count))
+
+                        if str(order.itemid) == str(sproduct.id) and str(order.description) == str(sproduct.description) and str(order.count) == str(sproduct.count):
+                                 print("create xml for ups reqTruck")
+
                                  items = []
                                  items.append(Item(sproduct.id, sproduct.count, sproduct.description))
                                  packages = []
                                  packages.append(Package(apack.shipid,uni_int(order.address_X), uni_int(order.address_Y),uni_string(order.ups_name),items))
-                                 rTruckXml = reqTruckXML(uni_int(order.order_id),arrive.whnum, packages)
+                                 rTruckXml = reqTruckXML(order.order_id,arrive.whnum, packages)
+                                 print(rTruckXml)
                                  UPSMessage.append(rTruckXml)
                                  orderList.remove(order)
                                  break
                 print(arrive.seqnum)
-                WorldMessage[apack.seqnum] = (s_command)
+                WorldMessage[apack.seqnum] = s_command
+                print("packsequm:" + str(apack.seqnum))
                 truck_command = amazon_pb2.ACommands()
                 truck = truck_command.load.add()
                 truck.whnum = arrive.whnum
@@ -373,11 +392,13 @@ def worldServer(s):
                 #recev packed and create put on truck
         if len(worldResponse.ready) > 0:
             for packed in worldResponse.ready:
+                print("ready shipid:" + str(packed.shipid))
+                print("ready seqnum:" + str(packed.seqnum))
                 for pot in putontruk_WL:
                     if pot.load[0].shipid == packed.shipid:
                         ship_truckMap[pot.load[0].shipid] = pot
                         putontruk_WL.remove(pot)
-                        break
+                        print("received ready")
 
 
 
@@ -385,19 +406,15 @@ def worldServer(s):
 
 
 
-def amazonWeb():
+def amazonWeb(listen_socket_web):
     global seqnum
     global order_id
 
-    listen_socket_web = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    listen_socket_web.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    listen_socket_web.bind((HOST, PORT))
-    listen_socket_web.listen(200)
 
     while True:
         client_connection, client_address = listen_socket_web.accept()
         request = client_connection.recv(10400)
-        listen_socket_web.close()
+        client_connection.close()
         print(request.decode('utf-8'))
 
         xml_request = request.decode('utf-8')
@@ -407,8 +424,6 @@ def amazonWeb():
 
         if Handler.commandtype == "buyProduct":
             s_command = amazon_pb2.ACommands()
-            ack = s_command.acks.add()
-            ack = seqnum
             buymore = s_command.buy.add()
             buymore.whnum = 1
             buymore.seqnum = seqnum
@@ -567,20 +582,18 @@ class WorldIDHandler(ContentHandler):
 if __name__ == '__main__':
 
 
-    HOST, PORT = socket.gethostbyname(socket.gethostname()), 65432
-
     #************* For UPS
     # UPS sockret for world id
     id_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     id_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    id_socket.bind((HOST, UPSPORT))
-    id_socket.listen(1)
+    id_socket.bind((HOST, UPSPORTR))
+    id_socket.listen(200)
     print("Begin listen...")
 
     id_connection, id_address = id_socket.accept()
     wid_xml = id_connection.recv(100)
     print("World id received:", wid_xml)
-    id_socket.close()
+    id_connection.close()
 
     # parse world id
     wid_hander = WorldIDHandler()
@@ -593,12 +606,12 @@ if __name__ == '__main__':
     listen_socket_web = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     listen_socket_web.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     listen_socket_web.bind((HOST, PORT))
-    listen_socket_web.listen(1)
+    listen_socket_web.listen(200)
 
     client_connection, client_address = listen_socket_web.accept()
     request = client_connection.recv(10400)
     print(request.decode('utf-8'))
-
+    client_connection.close()
 
     xml_request = request.decode('utf-8')
 
@@ -616,10 +629,10 @@ if __name__ == '__main__':
         socketonly = connectWorld(s_command)
 
 
-    threadamazon = threading.Thread(target=amazonWeb, args=())
+    threadamazon = threading.Thread(target=amazonWeb, args=(listen_socket_web,))
     threadworld = threading.Thread(target=worldServer, args=(socketonly,))
     threadUPSsend = threading.Thread(target=handleUPS,args=())
-    threadUPSrecv = threading.Thread(target=handleUPS2, args=())
+    threadUPSrecv = threading.Thread(target=handleUPS2, args=(id_socket,))
 
     threadUPSsend.start()
     threadamazon.start()

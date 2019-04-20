@@ -328,7 +328,7 @@ def connectWorld(worldconnect):
 
 def  ack_to_world(s, ack):
     ackcommand = amazon_pb2.ACommands()
-    ackcommand.acks.extend(ack)
+    ackcommand.acks.append(ack)
     send_message(s, ackcommand)
 
 

@@ -15,7 +15,7 @@ from google.protobuf.internal.encoder import _EncodeVarint
 HOST, PORT = socket.gethostbyname(socket.gethostname()), 65432
 
 # host, port for connecting with world
-WHOST, WPORT = "vcm-8513.vm.duke.edu", 23456
+WHOST, WPORT = "vcm-9387.vm.duke.edu", 23456
 
 #global variable used for create unique warehouseid shipid sequm and orderid
 Warehouse_id = 1
@@ -41,12 +41,17 @@ orderList = []
 #store all the messgae need to send to UPS
 UPSMessage = []
 
+#flag to protect initial goDeliver
+gdFlag = False
+
 #used to find all package on truck by truck_id
 truck_packageMap = dict()
 
+#used to map package id to tracking number
+package_tcknumMap = dict()
 
 # host for UPS
-UPSHOST, UPSPORTR, UPSPORTS = "vcm-8513.vm.duke.edu", 12346, 12347
+UPSHOST, UPSPORTR, UPSPORTS = "vcm-9387.vm.duke.edu", 12346, 12347
 
 
 #product info
@@ -101,6 +106,7 @@ class TruckHandler(xml.sax.ContentHandler):
         self.orderID = ""
         self.truckID = ""
         self.packageID = []
+        self.trackingnumber = []
 
     def startElement(self, tag, attributes):
         self.CurrentData = tag
@@ -119,6 +125,14 @@ class TruckHandler(xml.sax.ContentHandler):
             print ("***package***")
             self.packageID.append(attributes["id"])
             print ("package id: ", attributes["id"])
+
+    def endElement(self, tag):
+        self.CurrentData = ""
+
+    def characters(self, content):
+        if self.CurrentData == "trackingnumber":
+            self.trackingnumber.append(content)
+            print("Add tn:" + str(content))
 
 
 def prettify(elem):
@@ -150,7 +164,7 @@ def recvUPS(s):
     print(data)
 
 
-    if data.find("goLoad") != -1:
+    if data.find("goDeliver") != -1:
         # parse get truck id
         Handler = TruckHandler()  # only use Truck id in it
         xml.sax.parseString(data, Handler)
@@ -177,26 +191,41 @@ def recvUPS(s):
         Handler = TruckHandler()
         xml.sax.parseString(data, Handler)
 
+        print("Received reqTruck: ")
+        print(str(len(Handler.packageID)) + " packages")
+        print(str(len(Handler.trackingnumber)) + " tracking numbers")
+
         # map from truck id to multiple packageid
         tid = Handler.truckID
         pkgids = Handler.packageID
+        trknums = Handler.trackingnumber
+
+        # map package id to trk number
+        for i in range(len(pkgids)):
+            package_tcknumMap[pkgids[i]] = trknums[i]
+
+        #flag to prevent race
+        gdFlag = True
 
         # check exist
         if tid not in truck_packageMap.keys():
+
             truck_packageMap[tid] = []
 
         # update pot for each pkgid
         for pkgid in pkgids:
             truck_packageMap[tid].append(pkgid)
 
+        gdFlag = False
 
+# send message to ups
 def handleUPS():
     global UPSHOST
     global UPSPORTS
     # poll to check whether there's remaining commands in UPSMessage
     while True:
         global UPSMessage
-        # not empty: handle!
+        # not empty: handle everything before goDeliver!
         if (len(UPSMessage) != 0):
             # extra info from UPSMessage
             message = UPSMessage.pop(0)
@@ -206,6 +235,13 @@ def handleUPS():
             s.connect((UPSHOST, UPSPORTS))
 
             s.sendall(message.encode('utf-8'))
+        # specially for send goDeliver
+        else:
+            for key in truck_packageMap.keys():
+                if len(truck_packageMap[key]) == 0 and gdFlag == False:
+                    msg = goDeliverXML(str(key))
+                    UPSMessage.append(msg)
+
 
 
 def handleUPS2(s_recv):

@@ -59,11 +59,9 @@ def goDeliverXML(truckID):
     return str.encode('utf-8')
 
 # receive from UPS
-def recvUPS(s, timeout):
+def recvUPS(s, timeout, flag):
     ready = select.select([s], [], [], timeout)
     if ready[0]:
-        # pop out UPSMessage
-        UPSMessage.pop(0)
         # receive result
         data = s.recv(10240)
         # parse data and do something
@@ -71,6 +69,10 @@ def recvUPS(s, timeout):
         print("*******From UPS*******\n")
         print(data)
 
+        if flag:
+            # pop out UPSMessage
+            UPSMessage.pop(0)
+            
         if data.find("goLoad") != -1:
             # parse get truck id
             Handler = TruckHandler() # only use Truck id in it
@@ -131,7 +133,7 @@ def handleUPS():
             # recv, ACK/handle and add
             s.setblocking(0)
             timeout = 60 * 1
-            recvUPS(s, timeout)
+            recvUPS(s, timeout, True)
             
         else:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -141,7 +143,7 @@ def handleUPS():
             # recv, ACK/handle and add
             s.setblocking(0)
             timeout = 20 * 1
-            recvUPS(s, timeout)
+            recvUPS(s, timeout, False)
 
 
 

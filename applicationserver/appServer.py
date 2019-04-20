@@ -581,8 +581,11 @@ if __name__ == '__main__':
 
     id_connection, id_address = id_socket.accept()
     wid_xml = id_connection.recv(100)
+    # get rid of length
+    wid_xml = wid_xml[wid_xml.find("\n") + 1:]
     print("World id received:", wid_xml)
     id_connection.close()
+
 
     # parse world id
     wid_hander = WorldIDHandler()

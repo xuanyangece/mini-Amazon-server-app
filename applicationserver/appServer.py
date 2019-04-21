@@ -15,7 +15,7 @@ from google.protobuf.internal.encoder import _EncodeVarint
 HOST, PORT = socket.gethostbyname(socket.gethostname()), 65432
 
 # host, port for connecting with world
-WHOST, WPORT = "vcm-9387.vm.duke.edu", 23456
+WHOST, WPORT = "vcm-8513.vm.duke.edu", 23456
 
 #global variable used for create unique warehouseid shipid sequm and orderid
 Warehouse_id = 1
@@ -51,7 +51,7 @@ truck_packageMap = dict()
 package_tcknumMap = dict()
 
 # host for UPS
-UPSHOST, UPSPORTR, UPSPORTS = "vcm-9387.vm.duke.edu", 12346, 12347
+UPSHOST, UPSPORTR, UPSPORTS = "vcm-8513.vm.duke.edu", 12346, 12347
 
 
 #product info
@@ -89,7 +89,7 @@ def reqTruckXML(orderID, whID, packages):
             strXML += "\t\t\t<item name=\"" + item.name + "\" quantity=\"" + item.quantity + "\" description=\""
             strXML += item.description + "\"/>\n"
         strXML += "\t\t</UPS>\n"
-        strXML += "\t\t</Package>\n"
+        strXML += "\t</Package>\n"
 
     #strXML += "\t</Packages>\n"
     strXML += "</reqTruck>\n"
@@ -121,10 +121,10 @@ class TruckHandler(xml.sax.ContentHandler):
             self.truckID = attributes["id"]
             print ("Truck id: ", self.truckID)
 
-        if tag == "package":
-            print ("***package***")
+        if tag == "Package":
+            print ("***Package***")
             self.packageID.append(attributes["id"])
-            print ("package id: ", attributes["id"])
+            print ("Package id: ", attributes["id"])
 
     def endElement(self, tag):
         self.CurrentData = ""
@@ -156,7 +156,7 @@ def goDeliverXML(truckID):
 
 # receive from UPS
 def recvUPS(s):
-
+    global gdFlag
     data = s.recv(10240)
     # parse data and do something
     data = str(data)
@@ -168,12 +168,14 @@ def recvUPS(s):
         # parse get truck id
         Handler = TruckHandler()  # only use Truck id in it
         xml.sax.parseString(data, Handler)
-        tid = Handler.truckID
+        tid = uni_int(Handler.truckID)
 
         # traverse all packageids
         pkgids = truck_packageMap[tid]
 
         for pkgid in pkgids:
+            pkgid = uni_int(pkgid)
+
             # get the pot
             pot = ship_truckMap[pkgid]
             for x in pot.load:
@@ -196,32 +198,43 @@ def recvUPS(s):
         print(str(len(Handler.trackingnumber)) + " tracking numbers")
 
         # map from truck id to multiple packageid
-        tid = Handler.truckID
+        tid = uni_int(Handler.truckID)
         pkgids = Handler.packageID
         trknums = Handler.trackingnumber
 
+        print("Length of packageID")
+        print("Length of trackingnumber")
+        print("Should be equal")
+
         # map package id to trk number
         for i in range(len(pkgids)):
-            package_tcknumMap[pkgids[i]] = trknums[i]
+            pkg = uni_int(pkgids[i])
+            trknum = uni_int(trknums[i])
+            package_tcknumMap[pkg] = trknum
 
         #flag to prevent race
         gdFlag = True
 
+        print("gdFlag = True........")
+
         # check exist
         if tid not in truck_packageMap.keys():
-
+            print("Create empty list for truck id: " + str(tid))
             truck_packageMap[tid] = []
 
         # update pot for each pkgid
         for pkgid in pkgids:
+            pkgid = uni_int(pkgid)
             truck_packageMap[tid].append(pkgid)
 
         gdFlag = False
+        print("gdFlag = False........")
 
 # send message to ups
 def handleUPS():
     global UPSHOST
     global UPSPORTS
+    global gdFlag
     # poll to check whether there's remaining commands in UPSMessage
     while True:
         global UPSMessage
@@ -239,8 +252,12 @@ def handleUPS():
         else:
             for key in truck_packageMap.keys():
                 if len(truck_packageMap[key]) == 0 and gdFlag == False:
+                    print("Length of value to this key(a list): " + str(len(truck_packageMap[key])))
+                    print("Ready to goDeliver")
                     msg = goDeliverXML(str(key))
                     UPSMessage.append(msg)
+                    truck_packageMap.pop(key)
+
 
 
 
@@ -427,6 +444,7 @@ def worldServer(s):
 
 
         if len(worldResponse.ready) > 0:
+            print("***********Now ready")
             for packed in worldResponse.ready:
                 ack_to_world(s, packed.seqnum)
                 print("ready shipid:" + str(packed.shipid))
@@ -438,12 +456,15 @@ def worldServer(s):
                         print("received ready")
 
         if len(worldResponse.loaded) > 0:
+            print("***********Now loaded")
             for load in worldResponse.loaded:
+                ack_to_world(s, load.seqnum)
                 send_message(s, load.seqnum)
                 for key in truck_packageMap.keys():
                     for pakid in truck_packageMap[key]:
                         if pakid == load.shipid:
-                            pakid.remove(pakid)
+                            print("remove:" + str(pakid))
+                            truck_packageMap[key].remove(pakid)
 
 #recv and handle all the message from amazonweb
 def amazonWeb(listen_socket_web):
@@ -582,7 +603,7 @@ if __name__ == '__main__':
     id_connection, id_address = id_socket.accept()
     wid_xml = id_connection.recv(100)
     # get rid of length
-    wid_xml = wid_xml[wid_xml.find("\n") + 1:]
+    #wid_xml = wid_xml[wid_xml.find("\n") + 1:]
     print("World id received:", wid_xml)
     id_connection.close()
 

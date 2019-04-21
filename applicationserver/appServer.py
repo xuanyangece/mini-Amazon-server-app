@@ -15,7 +15,7 @@ from google.protobuf.internal.encoder import _EncodeVarint
 HOST, PORT = socket.gethostbyname(socket.gethostname()), 65432
 
 # host, port for connecting with world
-WHOST, WPORT = "vcm-8513.vm.duke.edu", 23456
+WHOST, WPORT = "vcm-9387.vm.duke.edu", 23456
 
 #global variable used for create unique warehouseid shipid sequm and orderid
 Warehouse_id = 1
@@ -51,7 +51,7 @@ truck_packageMap = dict()
 package_tcknumMap = dict()
 
 # host for UPS
-UPSHOST, UPSPORTR, UPSPORTS = "vcm-8513.vm.duke.edu", 12346, 12347
+UPSHOST, UPSPORTR, UPSPORTS = "vcm-9387.vm.duke.edu", 12346, 12347
 
 
 #product info
@@ -182,11 +182,15 @@ def recvUPS(s):
             print("Type of key when we use it: " + str(type(pkgid)) + " and it's " + str(pkgid))
 
             while True:
-                if len(truck_packageMap.keys()) == 0:
+                if len(ship_truckMap.keys()) == 0:
                     continue
 
                 #print("Now has keys")
-                if pkgid in truck_packageMap.keys():
+                print("type of pkgid " + str(type(pkgid)))
+                for i in range(len(ship_truckMap.keys())):
+                    keys = ship_truckMap.keys()
+                    print("the " + str(i) + " th key is " + str(keys[i]))
+                if pkgid in ship_truckMap.keys():
                     break
 
             # get the pot
@@ -470,6 +474,8 @@ def worldServer(s):
                 truck = truck_command.load.add()
                 truck.whnum = arrive.whnum
                 truck.shipid = apack.shipid
+                truck.seqnum = seqnum
+                seqnum = seqnum + 1
                 putontruck_WL.append(truck_command)
                 #recev packed and create put on truck
 
@@ -492,7 +498,6 @@ def worldServer(s):
             print("***********Now loaded")
             for load in worldResponse.loaded:
                 ack_to_world(s, load.seqnum)
-                send_message(s, load.seqnum)
 
                 for key in truck_packageMap.keys():
                     for pakid in truck_packageMap[key]:
@@ -638,7 +643,7 @@ if __name__ == '__main__':
     id_connection, id_address = id_socket.accept()
     wid_xml = id_connection.recv(100)
     # get rid of length
-    #wid_xml = wid_xml[wid_xml.find("\n") + 1:]
+    # wid_xml = wid_xml[wid_xml.find("\n") + 1:]
     print("World id received:", wid_xml)
     id_connection.close()
 
@@ -647,6 +652,7 @@ if __name__ == '__main__':
     wid_hander = WorldIDHandler()
     parseString(wid_xml, wid_hander)
     wid = wid_hander.worldID
+
 
 
     #************* For web

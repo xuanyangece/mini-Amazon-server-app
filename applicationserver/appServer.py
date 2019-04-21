@@ -157,13 +157,18 @@ def goDeliverXML(truckID):
 # receive from UPS
 def recvUPS(s):
     global gdFlag
+    global truck_packageMap
+    global WorldMessage
+    global package_tcknumMap
+    global ship_truckMap
+
     data = s.recv(10240)
     # parse data and do something
     data = str(data)
     print("*******From UPS*******\n")
     print(data)
 
-
+    # when the truck arrived
     if data.find("goDeliver") != -1:
         # parse get truck id
         Handler = TruckHandler()  # only use Truck id in it
@@ -174,16 +179,31 @@ def recvUPS(s):
         pkgids = truck_packageMap[tid]
 
         for pkgid in pkgids:
-            pkgid = uni_int(pkgid)
+            print("Type of key when we use it: " + str(type(pkgid)) + " and it's " + str(pkgid))
+
+            while True:
+                if len(truck_packageMap.keys()) == 0:
+                    continue
+
+                #print("Now has keys")
+                if pkgid in truck_packageMap.keys():
+                    break
 
             # get the pot
             pot = ship_truckMap[pkgid]
             for x in pot.load:
+                print("PutOnTruck")
+                print("x whnum *****: " + str(x.whnum))
+                print("x shipid: " + str(x.shipid))
                 # pot update
                 x.truckid = tid
 
+            print("Before put in world message")
+
             # put in in WorldMessage
             WorldMessage[pot.load[0].seqnum] = pot
+
+            print("Add pot to world message")
 
             # remove pot
             ship_truckMap.pop(pkgid)
@@ -235,6 +255,9 @@ def handleUPS():
     global UPSHOST
     global UPSPORTS
     global gdFlag
+    global UPSMessage
+    global truck_packageMap
+
     # poll to check whether there's remaining commands in UPSMessage
     while True:
         global UPSMessage
@@ -242,6 +265,9 @@ def handleUPS():
         if (len(UPSMessage) != 0):
             # extra info from UPSMessage
             message = UPSMessage.pop(0)
+
+            # print("-----------Ready to send-----------")
+            # print(message)
 
             # send UPSMessage info to UPS
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -358,11 +384,16 @@ def worldServer(s):
     timeout = 1
     global seqnum
     global ship_id
+    global truck_packageMap
+    global WorldMessage
+    global package_tcknumMap
+    global ship_truckMap
+
     while True:
         if(len(WorldMessage) > 0):
             for key in WorldMessage.keys():
-                print("key:"+ str(key))
                 send_message(s, WorldMessage[key])
+                print("SEND TO WORLD with key: " + str(key))
                 '''
                 one time 
                 one time 
@@ -451,7 +482,9 @@ def worldServer(s):
                 print("ready seqnum:" + str(packed.seqnum))
                 for pot in putontruck_WL:
                     if pot.load[0].shipid == packed.shipid:
-                        ship_truckMap[pot.load[0].shipid] = pot
+                        mykey = int(pot.load[0].shipid)
+                        print("Type of key when we struct map: " + str(type(mykey)) + " and key " + str(mykey))
+                        ship_truckMap[mykey] = pot
                         putontruck_WL.remove(pot)
                         print("received ready")
 
@@ -460,9 +493,11 @@ def worldServer(s):
             for load in worldResponse.loaded:
                 ack_to_world(s, load.seqnum)
                 send_message(s, load.seqnum)
+
                 for key in truck_packageMap.keys():
                     for pakid in truck_packageMap[key]:
-                        if pakid == load.shipid:
+
+                        if int(pakid) == int(load.shipid):
                             print("remove:" + str(pakid))
                             truck_packageMap[key].remove(pakid)
 

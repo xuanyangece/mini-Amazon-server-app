@@ -6,6 +6,7 @@ from .models import AmazonUser, Package, Product
 from django.urls import reverse
 from django.contrib import auth
 from django.contrib.auth.decorators import login_required
+from django.db.models import Q
 
 import xml.dom.minidom as minidom
 import xml.etree.ElementTree as ET
@@ -28,76 +29,6 @@ def prettify(elem):
 def homepage(request):
     return render(request, 'webserver/index.html', {})
 
-
-# buyProduct page
-@login_required
-def buyProduct(request, id):
-    user = get_object_or_404(User, id=id)
-    if request.method == 'POST':
-        form = BuyProductForm(request.POST)
-        if form.is_valid():
-            item_id = form.cleaned_data['item_id']
-            _ups_name = form.cleaned_data['ups_name']
-            _count = form.cleaned_data['count']
-            _x = form.cleaned_data['x']
-            _y = form.cleaned_data['y']
-
-            # retrive item description
-            items = list(Product.objects.filter(item_id=str(item_id)))
-            _description = items[0].description
-
-            # store in Package table
-            newpackage = Package(username=user.username, order_id=0, package_id=0, trackingnumber=0, status="", product_name=item_id, ups_name=_ups_name, description=_description, count=_count, x=_x, y=_y)
-            newpackage.save()
-
-
-            # generate XML
-            buyProductXML = ET.Element('buyProduct')
-
-            uidXML = ET.SubElement(buyProductXML, 'uid')
-            uidXML.text = str(newpackage.uid)
-
-            itemXML = ET.SubElement(buyProductXML, 'item_id')
-            itemXML.text = str(item_id)
-
-            upsXML = ET.SubElement(buyProductXML, 'ups_name')
-            upsXML.text = str(_ups_name)
-
-            descpXML = ET.SubElement(buyProductXML, 'description')
-            descpXML.text = str(_description)
-
-            countXML = ET.SubElement(buyProductXML, 'count')
-            countXML.text = str(_count)
-
-            xCoorXML = ET.SubElement(buyProductXML, 'x')
-            xCoorXML.text = str(_x)
-
-            yCoorXML = ET.SubElement(buyProductXML, 'y')
-            yCoorXML.text = str(_y)
-
-            buyProductRequest = prettify(buyProductXML)
-
-
-            # send order info to app server
-            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            app_server_ip = socket.gethostbyname(HOST)
-            s.connect((app_server_ip, PORT))
-            s.sendall(buyProductRequest.encode('utf-8'))
-
-            return HttpResponseRedirect(reverse('webserver:dashboard', args=[user.id]))
-
-    else:
-        # access all valid items from database
-        items = list(Product.objects.all())
-
-        form = BuyProductForm()
-        context = {
-            'user': user,
-            'form': form,
-            'items': items
-        }
-
-    return render(request, 'webserver/buyProduct.html', context)
 
 # createWarehouse page
 def createWarehouse(request):
@@ -182,6 +113,84 @@ def dashboard(request, id):
     user = get_object_or_404(User, id=id)
     return render(request, 'webserver/dashboard.html', {'user': user})
 
+
+# buyProduct page
+@login_required
+def buyProduct(request, id):
+    user = get_object_or_404(User, id=id)
+    if request.method == 'POST':
+        form = BuyProductForm(request.POST)
+        if form.is_valid():
+            item_id = form.cleaned_data['item_id']
+            _ups_name = form.cleaned_data['ups_name']
+            _count = form.cleaned_data['count']
+            _x = form.cleaned_data['x']
+            _y = form.cleaned_data['y']
+
+            # retrive item description
+            items = list(Product.objects.filter(item_id=str(item_id)))
+            _description = items[0].description
+
+            # store in Package table
+            newpackage = Package(username=user.username, order_id=0, package_id=0, trackingnumber=0, status="", product_name=item_id, ups_name=_ups_name, description=_description, count=_count, x=_x, y=_y)
+            newpackage.save()
+
+
+            # generate XML
+            buyProductXML = ET.Element('buyProduct')
+
+            uidXML = ET.SubElement(buyProductXML, 'uid')
+            uidXML.text = str(newpackage.uid)
+
+            itemXML = ET.SubElement(buyProductXML, 'item_id')
+            itemXML.text = str(item_id)
+
+            upsXML = ET.SubElement(buyProductXML, 'ups_name')
+            upsXML.text = str(_ups_name)
+
+            descpXML = ET.SubElement(buyProductXML, 'description')
+            descpXML.text = str(_description)
+
+            countXML = ET.SubElement(buyProductXML, 'count')
+            countXML.text = str(_count)
+
+            xCoorXML = ET.SubElement(buyProductXML, 'x')
+            xCoorXML.text = str(_x)
+
+            yCoorXML = ET.SubElement(buyProductXML, 'y')
+            yCoorXML.text = str(_y)
+
+            buyProductRequest = prettify(buyProductXML)
+
+
+            # send order info to app server
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            app_server_ip = socket.gethostbyname(HOST)
+            s.connect((app_server_ip, PORT))
+            s.sendall(buyProductRequest.encode('utf-8'))
+
+            return HttpResponseRedirect(reverse('webserver:dashboard', args=[user.id]))
+
+    else:
+        # access all valid items from database
+        items = list(Product.objects.all())
+
+        form = BuyProductForm()
+        context = {
+            'user': user,
+            'form': form,
+            'items': items
+        }
+
+    return render(request, 'webserver/buyProduct.html', context)
+
+
 # query
+@login_required
 def query(request, id):
-    return HttpResponseRedirect("/webserver/homepage/")
+    # get all packages related to this user
+    user = get_object_or_404(User, id=id)
+    packages = Package.objects.filter(username=user.username)
+    packages = list(packages)
+
+    return render(request, 'webserver/query.html', {'user': user, 'packages': packages})

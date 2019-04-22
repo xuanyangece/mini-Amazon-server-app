@@ -1,10 +1,11 @@
 from django.db import models
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.contrib.auth.models import User
+from datetime import datetime
 import uuid
 
 class Product(models.Model):
-    item_id = models.CharField(max_length=20)
+    item_id = models.CharField(primary_key=True, max_length=20)
     description = models.CharField(max_length=200)
 
 class BuyProduct(models.Model):
@@ -36,3 +37,4 @@ class Package(models.Model):
     count = models.IntegerField(default=1, validators=[MaxValueValidator(999999),MinValueValidator(1)])
     x = models.IntegerField(default=1)
     y = models.IntegerField(default=1)
+    date = models.DateTimeField(default=datetime.now, blank=True, editable=False)

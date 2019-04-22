@@ -2,7 +2,7 @@ from django.contrib.auth.models import User
 from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponseRedirect, HttpResponse
 from .forms import BuyProductForm, WarehouseForm, RegistrationForm, LoginForm
-from .models import AmazonUser, Package
+from .models import AmazonUser, Package, Product
 from django.urls import reverse
 from django.contrib import auth
 from django.contrib.auth.decorators import login_required
@@ -85,9 +85,17 @@ def buyProduct(request, id):
             return HttpResponseRedirect(reverse('webserver:dashboard', args=[user.id]))
 
     else:
-        form = BuyProductForm()
+        # access all valid items from database
+        items = list(Product.objects.all())
 
-    return render(request, 'webserver/buyProduct.html', {'form': form, 'user': user})
+        form = BuyProductForm()
+        context = {
+            'user': user,
+            'form': form,
+            'items': items
+        }
+
+    return render(request, 'webserver/buyProduct.html', context)
 
 # createWarehouse page
 def createWarehouse(request):

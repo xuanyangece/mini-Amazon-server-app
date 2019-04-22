@@ -3,6 +3,10 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.contrib.auth.models import User
 import uuid
 
+class Product(models.Model):
+    item_id = models.CharField(max_length=20)
+    description = models.CharField(max_length=200)
+
 class BuyProduct(models.Model):
     item_id = models.CharField(max_length=20)
     ups_name = models.CharField(max_length=30)
@@ -24,12 +28,11 @@ class Package(models.Model):
     username = models.CharField(max_length=30)
     order_id = models.IntegerField(default=1)
     package_id = models.IntegerField(default=1) # query
-    trackingnumber = models.IntegerField(default=1, validators=[MaxValueValidator(999999),MinValueValidator(1)])
-    status = models.CharField(max_length=30)
+    trackingnumber = models.IntegerField(default=1)
+    status = models.CharField(max_length=30, blank=True)
     product_name = models.CharField(max_length=20)
     ups_name = models.CharField(max_length=30)
     description = models.CharField(max_length=200)
     count = models.IntegerField(default=1, validators=[MaxValueValidator(999999),MinValueValidator(1)])
     x = models.IntegerField(default=1)
     y = models.IntegerField(default=1)
-

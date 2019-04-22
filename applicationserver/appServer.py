@@ -8,6 +8,7 @@ import xml.etree.ElementTree as ET
 import xml.sax
 import select
 import psycopg2
+from random import randint
 #import os
 
 
@@ -18,13 +19,16 @@ from google.protobuf.internal.encoder import _EncodeVarint
 HOST, PORT = socket.gethostbyname(socket.gethostname()), 65432
 
 # host, port for connecting with world
-WHOST, WPORT = "vcm-8423.vm.duke.edu", 23456
+WHOST, WPORT = "vcm-9387.vm.duke.edu", 23456
 
 #global variable used for create unique warehouseid shipid sequm and orderid
-Warehouse_id = 1
+warehouse_num = 0
 ship_id = 1
 order_id = 1000
 seqnum = 1
+
+worldspeed = 3000
+
 
 #store <sequm, Acommand> pair
 WorldMessage = dict()
@@ -54,7 +58,7 @@ truck_packageMap = dict()
 package_tcknumMap = dict()
 
 # host for UPS
-UPSHOST, UPSPORTR, UPSPORTS = "vcm-8423.vm.duke.edu", 12346, 12347
+UPSHOST, UPSPORTR, UPSPORTS = "vcm-9387.vm.duke.edu", 12346, 12347
 
 
 #product info
@@ -169,6 +173,8 @@ def recvUPS(s,conn):
     data = s.recv(10240)
     # parse data and do something
     data = str(data)
+    # skip '\n'
+    data = data[data.find("\n") + 1:]
     print("*******From UPS*******\n")
     print(data)
 
@@ -410,6 +416,7 @@ def worldServer(s,conn):
     global WorldMessage
     global package_tcknumMap
     global ship_truckMap
+    global worldspeed
     cursor = conn.cursor()
 
     while True:
@@ -456,7 +463,7 @@ def worldServer(s,conn):
                 apack.seqnum = seqnum
                 seqnum = seqnum + 1
                 apack.shipid = ship_id
-
+                s_command.simspeed = worldspeed
                 ship_id = ship_id + 1
                 print("**************arrived*************")
                 print(arrive.whnum)
@@ -571,7 +578,7 @@ def amazonWeb(listen_socket_web, conn):
         if Handler.commandtype == "buyProduct":
             s_command = amazon_pb2.ACommands()
             buymore = s_command.buy.add()
-            buymore.whnum = 1
+            buymore.whnum = randint(1, warehouse_num)
             buymore.seqnum = seqnum
             seqnum = seqnum + 1
             product = buymore.things.add()
@@ -698,6 +705,7 @@ class WorldIDHandler(ContentHandler):
 
 if __name__ == '__main__':
 
+    global warehouse_num
 
     #urlparse.uses_netloc.append("postgres")
     #url = urlparse.urlparse(os.environ["postgres://scmiwlgi:TFP9YRYa1EmcciYEEBqsAsrSq9O"])
@@ -724,7 +732,7 @@ if __name__ == '__main__':
     id_connection, id_address = id_socket.accept()
     wid_xml = id_connection.recv(100)
     # get rid of length
-    # wid_xml = wid_xml[wid_xml.find("\n") + 1:]
+    wid_xml = wid_xml[wid_xml.find("\n") + 1:]
     print("World id received:", wid_xml)
     id_connection.close()
 
@@ -757,6 +765,7 @@ if __name__ == '__main__':
         s_command = amazon_pb2.AConnect()
         s_command.worldid = int(wid)
         s_command.isAmazon = True
+        warehouse_num = uni_int(Handler.address_X)
         for i in range(1, uni_int(Handler.address_X)):
             warehouse = s_command.initwh.add()
             warehouse.id = i

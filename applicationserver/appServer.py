@@ -7,6 +7,9 @@ import xml.dom.minidom as minidom
 import xml.etree.ElementTree as ET
 import xml.sax
 import select
+import psycopg2
+#import os
+
 
 from google.protobuf.internal.decoder import _DecodeVarint32
 from google.protobuf.internal.encoder import _EncodeVarint
@@ -15,7 +18,7 @@ from google.protobuf.internal.encoder import _EncodeVarint
 HOST, PORT = socket.gethostbyname(socket.gethostname()), 65432
 
 # host, port for connecting with world
-WHOST, WPORT = "vcm-9387.vm.duke.edu", 23456
+WHOST, WPORT = "vcm-8423.vm.duke.edu", 23456
 
 #global variable used for create unique warehouseid shipid sequm and orderid
 Warehouse_id = 1
@@ -51,7 +54,7 @@ truck_packageMap = dict()
 package_tcknumMap = dict()
 
 # host for UPS
-UPSHOST, UPSPORTR, UPSPORTS = "vcm-9387.vm.duke.edu", 12346, 12347
+UPSHOST, UPSPORTR, UPSPORTS = "vcm-8423.vm.duke.edu", 12346, 12347
 
 
 #product info
@@ -155,7 +158,8 @@ def goDeliverXML(truckID):
 
 
 # receive from UPS
-def recvUPS(s):
+def recvUPS(s,conn):
+    cursor = conn.cursor()
     global gdFlag
     global truck_packageMap
     global WorldMessage
@@ -199,6 +203,9 @@ def recvUPS(s):
                 print("PutOnTruck")
                 print("x whnum *****: " + str(x.whnum))
                 print("x shipid: " + str(x.shipid))
+                sqlstatusloading = "UPDATE WEBSERVER_PACKAGE SET STATUS = 'loading' WHERE PACKAGE_ID = '" + str(x.shipid) + "';"
+                cursor.execute(sqlstatusloading)
+                conn.commit()
                 # pot update
                 x.truckid = tid
 
@@ -254,6 +261,17 @@ def recvUPS(s):
         gdFlag = False
         print("gdFlag = False........")
 
+    elif data.find("Delivered") != -1:
+        # parse
+        Handler = TruckHandler()
+        xml.sax.parseString(data, Handler)
+        pkgids = Handler.packageID
+        for pkgid in pkgids:
+            id = uni_string(pkgid)
+            sqlstatusdelivered = "UPDATE WEBSERVER_PACKAGE SET STATUS = 'delivered' WHERE PACKAGE_ID = '" + str(id) + "';"
+            cursor.execute(sqlstatusdelivered)
+            conn.commit()
+
 # send message to ups
 def handleUPS():
     global UPSHOST
@@ -291,11 +309,11 @@ def handleUPS():
 
 
 
-def handleUPS2(s_recv):
+def handleUPS2(s_recv,conn):
     global UPSPORTR
     while True:
         s_connection, s_address = s_recv.accept()
-        recvUPS(s_connection)
+        recvUPS(s_connection,conn)
         s_connection.close()
 
 
@@ -384,7 +402,7 @@ def  ack_to_world(s, ack):
 
 
 #used to send and handle commands and response to/from world
-def worldServer(s):
+def worldServer(s,conn):
     timeout = 1
     global seqnum
     global ship_id
@@ -392,6 +410,7 @@ def worldServer(s):
     global WorldMessage
     global package_tcknumMap
     global ship_truckMap
+    cursor = conn.cursor()
 
     while True:
         if(len(WorldMessage) > 0):
@@ -437,6 +456,7 @@ def worldServer(s):
                 apack.seqnum = seqnum
                 seqnum = seqnum + 1
                 apack.shipid = ship_id
+
                 ship_id = ship_id + 1
                 print("**************arrived*************")
                 print(arrive.whnum)
@@ -445,6 +465,13 @@ def worldServer(s):
                     print("Product description: " + str(product.description))
                     print("Product count: " + str(product.count))
 
+                    sqlSelect = "SELECT * FROM WEBSERVER_PACKAGE WHERE PRODUCT_NAME = '" + str(product.id) + "' AND COUNT = '" + str(product.count) + "' AND DESCRIPTION = '" + str(product.description) + "' AND PACKAGE_ID > 0 ORDER BY ORDER_ID ASC;"
+                    cursor.execute(sqlSelect)
+                    result = cursor.fetchall()
+                    uid =  result[0][11]
+                    sqlupdate = "UPDATE WEBSERVER_PACKAGE SET PACKAGE_ID = '" + str(apack.shipid) + "' WHERE UID = '" + str(uid) + "';"
+                    cursor.execute(sqlupdate)
+                    conn.commit()
                     sproduct = apack.things.add()
                     sproduct.id = product.id
                     sproduct.description = product.description
@@ -457,7 +484,6 @@ def worldServer(s):
 
                         if str(order.itemid) == str(sproduct.id) and str(order.description) == str(sproduct.description) and str(order.count) == str(sproduct.count):
                                  print("create xml for ups reqTruck")
-
                                  items = []
                                  items.append(Item(sproduct.id, sproduct.count, sproduct.description))
                                  packages = []
@@ -469,6 +495,10 @@ def worldServer(s):
                                  break
                 print(arrive.seqnum)
                 WorldMessage[apack.seqnum] = s_command
+                #cursor = conn.cursor()
+                sqlstatuspacking = "UPDATE WEBSERVER_PACKAGE SET STATUS = 'Packing' WHERE PACKAGE_ID = '" + str(apack.shipid) +"';"
+                cursor.execute(sqlstatuspacking)
+                conn.commit()
                 print("packsequm:" + str(apack.seqnum))
                 truck_command = amazon_pb2.ACommands()
                 truck = truck_command.load.add()
@@ -484,6 +514,9 @@ def worldServer(s):
             print("***********Now ready")
             for packed in worldResponse.ready:
                 ack_to_world(s, packed.seqnum)
+                sqlstatuspacked = "UPDATE WEBSERVER_PACKAGE SET STATUS = 'packed' WHERE PACKAGE_ID = '" + str(packed.shipid) + "';"
+                cursor.execute(sqlstatuspacked)
+                conn.commit()
                 print("ready shipid:" + str(packed.shipid))
                 print("ready seqnum:" + str(packed.seqnum))
                 for pot in putontruck_WL:
@@ -498,6 +531,9 @@ def worldServer(s):
             print("***********Now loaded")
             for load in worldResponse.loaded:
                 ack_to_world(s, load.seqnum)
+                sqlstatusdelivering = "UPDATE WEBSERVER_PACKAGE SET STATUS = 'delivering' WHERE PACKAGE_ID = '" + str(load.shipid) + "';"
+                cursor.execute(sqlstatusdelivering)
+                conn.commit()
 
                 for key in truck_packageMap.keys():
                     for pakid in truck_packageMap[key]:
@@ -506,16 +542,25 @@ def worldServer(s):
                             print("remove:" + str(pakid))
                             truck_packageMap[key].remove(pakid)
 
+        if len(worldResponse.packagestatus) > 0:
+            print("************Now status")
+            for package in  worldResponse.packagestatus:
+                ack_to_world(s, package.seqnum)
+                print("status:" + package.status)
+                sqlstatus = "UPDATE WEBSERVER_PACKAGE SET STATUS = '" + package.status + "' WHERE PACKAGE_ID = '" + str(package.packageid) + "'"
+                cursor.execute(sqlstatus)
+                conn.commit()
+
 #recv and handle all the message from amazonweb
-def amazonWeb(listen_socket_web):
+def amazonWeb(listen_socket_web, conn):
     global seqnum
     global order_id
 
-
+    cursor = conn.cursor()
     while True:
         client_connection, client_address = listen_socket_web.accept()
         request = client_connection.recv(10400)
-        client_connection.close()
+        # client_connection.close()
         print(request.decode('utf-8'))
 
         xml_request = request.decode('utf-8')
@@ -535,15 +580,24 @@ def amazonWeb(listen_socket_web):
             product.count = uni_int(Handler.count)
             WorldMessage[buymore.seqnum] = s_command
             Handler.order_id = order_id
+            sql = "UPDATE WEBSERVER_PACKAGE SET ORDER_ID = '" + str(order_id) + "' WHERE UID = '" + str(uni_string(Handler.uid)) + "';"
+
+            cursor.execute(sql)
             order_id = order_id + 1
             orderList.append(Handler)
 
+
+
         elif Handler.commandtype == "query":
             #skip now
-            s_command = amazon_pb2.AQuery()
-
+            s_command = amazon_pb2.ACommands()
+            aquery = s_command.queries.add()
+            aquery.packageid = uni_int(Handler.packageid)
+            aquery.seqnum = seqnum
             WorldMessage[seqnum] = s_command
             seqnum = seqnum + 1
+
+        client_connection.close()
 
 
 
@@ -562,6 +616,8 @@ class web_requestHandler(ContentHandler) :
         self.wareid = ""
         self.order_id = ""
         self.ship_id = ""
+        self.uid = ""
+        self.packageid = ""
 
 
     def startElement(self, tag, attributes):
@@ -575,6 +631,9 @@ class web_requestHandler(ContentHandler) :
         elif tag  == "getProduct":
             self.commandtype =  tag
             print("********getStock*******")
+        elif tag == "query":
+            self.commandtype = tag
+            print("************query******")
 
     def endElement(self, tag):
         if self.CurrentData == "item_id":
@@ -593,6 +652,10 @@ class web_requestHandler(ContentHandler) :
             print(self.worldid)
         elif self.CurrentData == "whID":
             print(self.wareid)
+        elif self.CurrentData == "uid":
+            print(self.uid)
+        elif self.CurrentData == "packageid":
+            print(self.packageid)
         self.CurrentData = ""
 
     def characters(self, content):
@@ -612,6 +675,10 @@ class web_requestHandler(ContentHandler) :
             self.worldid = content
         elif self.CurrentData == "whID":
             self.wareid = content
+        elif self.CurrentData == "uid":
+            self.uid =  content
+        elif self.CurrentData == "packageid":
+            self.packageid =  content
 
 
 #parsing the Worldid xml message from ups
@@ -630,6 +697,20 @@ class WorldIDHandler(ContentHandler):
 
 
 if __name__ == '__main__':
+
+
+    #urlparse.uses_netloc.append("postgres")
+    #url = urlparse.urlparse(os.environ["postgres://scmiwlgi:TFP9YRYa1EmcciYEEBqsAsrSq9O"])
+    conn = psycopg2.connect(
+    database="scmiwlgi",
+    user="scmiwlgi",
+    password="TFP9YRYa1EmcciYEEBqsAsrSq9O9qiWV",
+    host="isilo.db.elephantsql.com",
+    port="5432",
+    )
+    print("connect amazon database successfull")
+
+
 
 
     #************* For UPS
@@ -676,17 +757,18 @@ if __name__ == '__main__':
         s_command = amazon_pb2.AConnect()
         s_command.worldid = int(wid)
         s_command.isAmazon = True
-        warehouse = s_command.initwh.add()
-        warehouse.id = uni_int(Handler.wareid)
-        warehouse.x = uni_int(Handler.address_X)
-        warehouse.y = uni_int(Handler.address_Y)
+        for i in range(1, uni_int(Handler.address_X)):
+            warehouse = s_command.initwh.add()
+            warehouse.id = i
+            warehouse.x = i
+            warehouse.y = i
         socketonly = connectWorld(s_command)
 
 
-    threadamazon = threading.Thread(target=amazonWeb, args=(listen_socket_web,))
-    threadworld = threading.Thread(target=worldServer, args=(socketonly,))
+    threadamazon = threading.Thread(target=amazonWeb, args=(listen_socket_web,conn,))
+    threadworld = threading.Thread(target=worldServer, args=(socketonly,conn))
     threadUPSsend = threading.Thread(target=handleUPS,args=())
-    threadUPSrecv = threading.Thread(target=handleUPS2, args=(id_socket,))
+    threadUPSrecv = threading.Thread(target=handleUPS2, args=(id_socket,conn))
 
     threadUPSsend.start()
     threadamazon.start()

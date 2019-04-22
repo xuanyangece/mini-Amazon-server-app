@@ -1,6 +1,8 @@
 from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponseRedirect, HttpResponse
-from .forms import BuyProductForm, WarehouseForm
+from .forms import BuyProductForm, WarehouseForm, RegistrationForm
+from django.contrib.auth.models import User
+from .models import AmazonUser
 
 import xml.dom.minidom as minidom
 import xml.etree.ElementTree as ET
@@ -106,3 +108,26 @@ def createWarehouse(request):
         form = WarehouseForm()
 
     return render(request, 'webserver/createWarehouse.html', {'form': form})
+
+# register a new account
+def register(request):
+    if request.method == 'POST':
+        form = RegistrationForm(request.POST)
+        if form.is_valid():
+            username = form.cleaned_data['username']
+            first_name = form.cleaned_data['first_name']
+            last_name = form.cleaned_data['last_name']
+            email = form.cleaned_data['email']
+            password = form.cleaned_data['password2']
+
+            user = User.objects.create_user(username=username, first_name=first_name, last_name=last_name, password=password, email=email)
+
+            user_profile = AmazonUser(user=user)
+            user_profile.save()
+
+            return HttpResponseRedirect("/webserver/homepage/")
+
+    else:
+        form = RegistrationForm()
+
+    return render(request, 'webserver/registration.html', {'form':form})

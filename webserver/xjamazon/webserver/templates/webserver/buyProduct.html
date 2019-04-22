@@ -7,7 +7,26 @@
 <body>
     {% block content %}
     <h2>Welcome to MINI Amazon by Xuan and Jie!</h2>
-    <h4>Buy product for user</h4>
+    <h4>Buy product as user</h4>
+    
+
+    {% if items|length > 0 %}
+    <ul>
+        <p>Here are the options you have:</p>
+        {% for item in items %}
+        <li>
+            <p>Item ID: {{ item.item_id }}</p>
+            <p>Item Description: {{ item.item_description }}</p>
+            <br>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <h6>You cannot currently buy anything.</h6>
+    {% endif %}
+
+    <br>
+    <h4>Choose the item you want to buy</h4>
     <div class="form-wrapper">
         <form method="POST" action="" enctype="multipart/form-data">
             {% csrf_token %}
@@ -22,7 +41,8 @@
             {% endfor %}
             <div class="button-wrapper submit"><input type="submit" value="Buy this product"></div>
         </form>
-        <a href="/webserver/homepage">Back to homepage</a>
+        <a href="{% url 'webserver:dashboard' user.id %}">Back to dashboard</a>
+        <a href="{% url 'webserver:logout' %}">Log out</a>
     </div>
     {% endblock %}
 </body>

@@ -22,7 +22,8 @@
             {% endfor %}
             <div class="button-wrapper submit"><input type="submit" value="Buy this product"></div>
         </form>
-        <a href="/webserver/homepage">Back to homepage</a>
+        <a href="{% url 'webserver:dashboard' user.id %}">Back to dashboard</a>
+        <a href="{% url 'webserver:logout' %}">Log out</a>
     </div>
     {% endblock %}
 </body>

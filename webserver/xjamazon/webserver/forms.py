@@ -14,9 +14,7 @@ class BuyProductForm(forms.Form):
 
 
 class WarehouseForm(forms.Form):
-    whID = forms.CharField(label='Warehouse ID', max_length=20)
     x = forms.IntegerField(label='x')
-    y = forms.IntegerField(label='y')
 
 
 class LoginForm(forms.Form):

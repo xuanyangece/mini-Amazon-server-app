@@ -87,7 +87,7 @@ def buyProduct(request, id):
     else:
         form = BuyProductForm()
 
-    return render(request, 'webserver/buyProduct.html', {'form': form})
+    return render(request, 'webserver/buyProduct.html', {'form': form, 'user': user})
 
 # createWarehouse page
 def createWarehouse(request):

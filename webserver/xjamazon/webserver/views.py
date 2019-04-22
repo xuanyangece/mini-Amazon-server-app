@@ -38,11 +38,13 @@ def buyProduct(request, id):
         if form.is_valid():
             item_id = form.cleaned_data['item_id']
             _ups_name = form.cleaned_data['ups_name']
-            _description = form.cleaned_data['description']
             _count = form.cleaned_data['count']
             _x = form.cleaned_data['x']
             _y = form.cleaned_data['y']
 
+            # retrive item description
+            items = list(Product.objects.filter(item_id=str(item_id)))
+            _description = items[0].description
 
             # store in Package table
             newpackage = Package(username=user.username, order_id=0, package_id=0, trackingnumber=0, status="", product_name=item_id, ups_name=_ups_name, description=_description, count=_count, x=_x, y=_y)
@@ -56,13 +58,13 @@ def buyProduct(request, id):
             uidXML.text = str(newpackage.uid)
 
             itemXML = ET.SubElement(buyProductXML, 'item_id')
-            itemXML.text = item_id
+            itemXML.text = str(item_id)
 
             upsXML = ET.SubElement(buyProductXML, 'ups_name')
-            upsXML.text = _ups_name
+            upsXML.text = str(_ups_name)
 
             descpXML = ET.SubElement(buyProductXML, 'description')
-            descpXML.text = _description
+            descpXML.text = str(_description)
 
             countXML = ET.SubElement(buyProductXML, 'count')
             countXML.text = str(_count)

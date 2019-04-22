@@ -185,12 +185,39 @@ def buyProduct(request, id):
     return render(request, 'webserver/buyProduct.html', context)
 
 
-# query
+# list all packages
 @login_required
 def query(request, id):
     # get all packages related to this user
     user = get_object_or_404(User, id=id)
-    packages = Package.objects.filter(username=user.username)
+    packages = Package.objects.filter(~Q(package_id=0), username=user.username)
     packages = list(packages)
 
     return render(request, 'webserver/query.html', {'user': user, 'packages': packages})
+
+# query specific package
+@login_required
+def querypackage(request, id, pid):
+    # STEP 1: tell app
+    # generate XML
+    queryXML = ET.Element('query')
+
+    pidXML = ET.SubElement(queryXML, 'packageid')
+    pidXML.text = str(pid)
+
+    queryRequest = prettify(queryXML)
+
+    # send query to app server
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    app_server_ip = socket.gethostbyname(HOST)
+    s.connect((app_server_ip, PORT))
+    s.sendall(queryRequest.encode('utf-8'))
+
+
+    # STEP 2: render
+    # retrive information
+    user = get_object_or_404(User, id=id)
+    packages = Package.objects.filter(package_id=int(pid))
+    package = list(packages)[0]
+
+    return render(request, 'webserver/queryresult.html', {'user': user, 'package': package})

@@ -11,6 +11,7 @@
 
     {% if packages|length > 0 %}
     <ul>
+        <h6>Here are the packages you have:</h6>
         {% for package in packages %}
         <li>
             <p>Package ID: {{ package.package_id }}</p>
@@ -18,17 +19,17 @@
             <p>Item ID: {{ package.product_name }}</p>
             <p>Item Count: {{ package.count }}</p>
             <p>Destination: x={{ package.x }} y={{ package.y }}</p>
-            <a href="">Check status for this package</a>
+            <a href="{% url 'webserver:querypackage' user.id package.package_id %}">Check status for this package</a>
             <br>
         </li>
         {% endfor %}
     </ul>
     {% else %}
-    <h4>You have no ongoing package yet.</h4>
+    <h4>You have no ongoing package yet (or your packages are in the process of being initialized).</h4>
     {% endif %}
 
     <a href="{% url 'webserver:dashboard' user.id %}">Back to dashboard</a>
-    
+
     {% endblock %}
 </body>
 </html>

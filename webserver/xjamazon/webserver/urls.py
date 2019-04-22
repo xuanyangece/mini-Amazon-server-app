@@ -12,5 +12,6 @@ urlpatterns = [
     path('buyProduct/<int:id>', views.buyProduct, name='buyProduct'),
     path('dashboard/<int:id>/', views.dashboard, name='dashboard'),
     path('query/<int:id>/', views.query, name='query'),
+    path('query/<int:id>/package/<int:pid>/', views.querypackage, name='querypackage'),
     path('logout/', views.logout, name='logout'),
 ]

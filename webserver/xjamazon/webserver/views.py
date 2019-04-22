@@ -1,8 +1,11 @@
+from django.contrib.auth.models import User
 from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponseRedirect, HttpResponse
-from .forms import BuyProductForm, WarehouseForm, RegistrationForm
-from django.contrib.auth.models import User
-from .models import AmazonUser
+from .forms import BuyProductForm, WarehouseForm, RegistrationForm, LoginForm
+from .models import AmazonUser, Package
+from django.urls import reverse
+from django.contrib import auth
+from django.contrib.auth.decorators import login_required
 
 import xml.dom.minidom as minidom
 import xml.etree.ElementTree as ET
@@ -27,47 +30,59 @@ def homepage(request):
 
 
 # buyProduct page
-def buyProduct(request):
+@login_required
+def buyProduct(request, id):
+    user = get_object_or_404(User, id=id)
     if request.method == 'POST':
         form = BuyProductForm(request.POST)
         if form.is_valid():
             item_id = form.cleaned_data['item_id']
-            ups_name = form.cleaned_data['ups_name']
-            description = form.cleaned_data['description']
-            count = form.cleaned_data['count']
-            x = form.cleaned_data['x']
-            y = form.cleaned_data['y']
+            _ups_name = form.cleaned_data['ups_name']
+            _description = form.cleaned_data['description']
+            _count = form.cleaned_data['count']
+            _x = form.cleaned_data['x']
+            _y = form.cleaned_data['y']
+
+
+            # store in Package table
+            newpackage = Package(username=user.username, order_id=0, package_id=0, trackingnumber=0, status="", product_name=item_id, ups_name=_ups_name, description=_description, count=_count, x=_x, y=_y)
+            newpackage.save()
+
 
             # generate XML
             buyProductXML = ET.Element('buyProduct')
+
+            uidXML = ET.SubElement(buyProductXML, 'uid')
+            uidXML.text = str(newpackage.uid)
 
             itemXML = ET.SubElement(buyProductXML, 'item_id')
             itemXML.text = item_id
 
             upsXML = ET.SubElement(buyProductXML, 'ups_name')
-            upsXML.text = ups_name
+            upsXML.text = _ups_name
 
             descpXML = ET.SubElement(buyProductXML, 'description')
-            descpXML.text = description
+            descpXML.text = _description
 
             countXML = ET.SubElement(buyProductXML, 'count')
-            countXML.text = str(count)
+            countXML.text = str(_count)
 
             xCoorXML = ET.SubElement(buyProductXML, 'x')
-            xCoorXML.text = str(x)
+            xCoorXML.text = str(_x)
 
             yCoorXML = ET.SubElement(buyProductXML, 'y')
-            yCoorXML.text = str(y)
+            yCoorXML.text = str(_y)
 
             buyProductRequest = prettify(buyProductXML)
-    
+
+
             # send order info to app server
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             app_server_ip = socket.gethostbyname(HOST)
             s.connect((app_server_ip, PORT))
             s.sendall(buyProductRequest.encode('utf-8'))
 
-            return HttpResponseRedirect("/webserver/homepage/")
+            return HttpResponseRedirect(reverse('webserver:dashboard', args=[user.id]))
 
     else:
         form = BuyProductForm()
@@ -79,21 +94,13 @@ def createWarehouse(request):
     if request.method == 'POST':
         form = WarehouseForm(request.POST)
         if form.is_valid():
-            whID = form.cleaned_data['whID']
             x = form.cleaned_data['x']
-            y = form.cleaned_data['y']
 
             # generate XML
             newWHXML = ET.Element('createWarehouse')
 
-            whIDXML = ET.SubElement(newWHXML, 'whID')
-            whIDXML.text = whID
-
             xCoorXML = ET.SubElement(newWHXML, 'x')
             xCoorXML.text = str(x)
-
-            yCoorXML = ET.SubElement(newWHXML, 'y')
-            yCoorXML.text = str(y)
 
             newWHRequest = prettify(newWHXML)
 
@@ -131,3 +138,40 @@ def register(request):
         form = RegistrationForm()
 
     return render(request, 'webserver/registration.html', {'form':form})
+
+# login into your account
+def login(request):
+    if request.method == 'POST':
+        form = LoginForm(request.POST)
+        if form.is_valid():
+            username = form.cleaned_data['username']
+            password = form.cleaned_data['password']
+
+            user = auth.authenticate(username=username, password=password)
+
+            if user is not None and user.is_active:
+                auth.login(request, user)
+                return HttpResponseRedirect(reverse('webserver:dashboard', args=[user.id]))
+            else:
+                return render(request, 'webserver/login.html', {'form':form, 'message': 'Wrong password. Please try again.'})
+
+    else:
+        form = LoginForm()
+
+    return render(request, 'webserver/login.html', {'form': form})
+
+# logout your account
+@login_required
+def logout(request):
+    auth.logout(request)
+    return HttpResponseRedirect("/webserver/homepage/")
+
+# dashboard of Amazon account
+@login_required
+def dashboard(request, id):
+    user = get_object_or_404(User, id=id)
+    return render(request, 'webserver/dashboard.html', {'user': user})
+
+# query
+def query(request, id):
+    return HttpResponseRedirect("/webserver/homepage/")

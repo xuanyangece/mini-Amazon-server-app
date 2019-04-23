@@ -13,11 +13,14 @@
     <ul>
         {% for package in packages %}
         <li>
+            <p>Order ID: {{ package.order_id }}</p>
             <p>Package ID: {{ package.package_id }}</p>
             <p>Purchase Date(EST): {{ package.date }}</p>
             <p>Item ID: {{ package.product_name }}</p>
             <p>Item Count: {{ package.count }}</p>
             <p>Destination: x={{ package.x }} y={{ package.y }}</p>
+            <p>UPS Name: {{ package.ups_name }}</p>
+            <p>Tracking Number: {{ package.trackingnumber }}</p>
             <a href="{% url 'webserver:querypackage' user.id package.package_id %}">Check status for this package</a>
             <br>
         </li>

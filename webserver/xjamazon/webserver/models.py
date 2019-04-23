@@ -7,6 +7,9 @@ import uuid
 class Product(models.Model):
     item_id = models.CharField(primary_key=True, max_length=20)
     description = models.CharField(max_length=200)
+    rating = models.FloatField(default=0.0)
+    totalscore = models.FloatField(default=0.0)
+    num_of_ratings = models.IntegerField(default=1)
 
 class BuyProduct(models.Model):
     item_id = models.CharField(max_length=20)
@@ -38,3 +41,4 @@ class Package(models.Model):
     x = models.IntegerField(default=1)
     y = models.IntegerField(default=1)
     date = models.DateTimeField(default=datetime.now, blank=True, editable=False)
+    rating = models.FloatField(default=0.0)

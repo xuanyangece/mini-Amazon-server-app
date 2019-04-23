@@ -9,7 +9,7 @@ class Product(models.Model):
     description = models.CharField(max_length=200)
     rating = models.FloatField(default=0.0)
     totalscore = models.FloatField(default=0.0)
-    num_of_ratings = models.IntegerField(default=1)
+    num_of_ratings = models.IntegerField(default=0)
 
 class BuyProduct(models.Model):
     item_id = models.CharField(max_length=20)

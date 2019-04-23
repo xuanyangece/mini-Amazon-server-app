@@ -26,6 +26,7 @@ class Warehouse(models.Model):
     
 class AmazonUser(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
+    credit = models.IntegerField(default=0)
 
 class Package(models.Model):
     uid = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

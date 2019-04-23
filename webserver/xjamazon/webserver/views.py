@@ -111,13 +111,15 @@ def logout(request):
 @login_required
 def dashboard(request, id):
     user = get_object_or_404(User, id=id)
-    return render(request, 'webserver/dashboard.html', {'user': user})
+    amazonuser = get_object_or_404(AmazonUser, user=user)
+    return render(request, 'webserver/dashboard.html', {'user': user, 'amazonuser': amazonuser})
 
 
 # buyProduct page
 @login_required
 def buyProduct(request, id):
     user = get_object_or_404(User, id=id)
+    amazonuser = get_object_or_404(AmazonUser, user=user)
     if request.method == 'POST':
         form = BuyProductForm(request.POST)
         if form.is_valid():
@@ -135,12 +137,20 @@ def buyProduct(request, id):
             newpackage = Package(username=user.username, order_id=0, package_id=0, trackingnumber=0, status="", product_name=item_id, ups_name=_ups_name, description=_description, count=_count, x=_x, y=_y)
             newpackage.save()
 
+            # update credit
+            curtcredit = amazonuser.credit 
+            curtcredit = int(curtcredit) + int(_count) * 10
+            amazonuser.credit = curtcredit
+            amazonuser.save()
 
             # generate XML
             buyProductXML = ET.Element('buyProduct')
 
             uidXML = ET.SubElement(buyProductXML, 'uid')
             uidXML.text = str(newpackage.uid)
+
+            emailXML = ET.SubElement(buyProductXML, 'email')
+            emailXML.text = str(user.email)
 
             itemXML = ET.SubElement(buyProductXML, 'item_id')
             itemXML.text = str(item_id)
@@ -168,6 +178,7 @@ def buyProduct(request, id):
             app_server_ip = socket.gethostbyname(HOST)
             s.connect((app_server_ip, PORT))
             s.sendall(buyProductRequest.encode('utf-8'))
+
 
             return HttpResponseRedirect(reverse('webserver:dashboard', args=[user.id]))
 
@@ -224,7 +235,7 @@ def querypackage(request, id, pid):
             total_score += rating
             num_ratings += 1
             new_rating = total_score / num_ratings
-            
+
             product.rating = round(new_rating, 1)
             product.totalscore = total_score
             product.num_of_ratings = num_ratings

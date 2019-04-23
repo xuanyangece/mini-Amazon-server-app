@@ -17,6 +17,9 @@
             <hr class="my-4">
             <p>For admin, you need to set up warehouses and connect to world.</p>
             <a class="btn btn btn-secondary btn-lg" href="{% url 'webserver:createWarehouse' %}" role="button">Create new warehouse in World.</a>
+            <br>
+            <p>Or close connection to the world</p>
+            <a class="btn btn btn-secondary btn-lg" href="{% url 'webserver:close' %}" role="button">Close.</a>
             <hr class="my-4">
             <p>For users, you can register or login to use our app.</p>
             <a class="btn btn btn-secondary btn-sm" href="{% url 'webserver:register' %}" role="button">Register</a>

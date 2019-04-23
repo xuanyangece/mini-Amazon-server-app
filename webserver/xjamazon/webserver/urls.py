@@ -6,6 +6,7 @@ app_name = 'webserver'
 
 urlpatterns = [
     path('homepage/', views.homepage, name='homepage'),
+    path('close/', views.close, name='close'),
     path('createWarehouse/', views.createWarehouse, name='createWarehouse'),
     path('login/', views.login, name='login'),
     path('register/', views.register, name='register'),

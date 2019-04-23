@@ -16,6 +16,7 @@ import socket
 # modify according to app server
 HOST, PORT = "vcm-8965.vm.duke.edu", 65432
 
+
 # helper function for prettify XML from https://stackoverflow.com/questions/17402323/use-xml-etree-elementtree-to-print-nicely-formatted-xml-files
 def prettify(elem):
     """Return a pretty-printed XML string for the Element.
@@ -27,6 +28,21 @@ def prettify(elem):
 
 # homepage
 def homepage(request):
+    return render(request, 'webserver/index.html', {})
+
+# close world, tell UPS close connection
+def close(request):
+    # generate XML
+    closeXML = ET.Element('closeWorld')
+
+    closerequest = prettify(closeXML)
+
+    # send close request to app server
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    app_server_ip = socket.gethostbyname(HOST)
+    s.connect((app_server_ip, PORT))
+    s.sendall(closerequest.encode('utf-8'))
+
     return render(request, 'webserver/index.html', {})
 
 

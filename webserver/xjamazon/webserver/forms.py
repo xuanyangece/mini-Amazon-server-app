@@ -19,6 +19,14 @@ class BuyProductForm(forms.Form):
             choices=[(o.item_id, str(o.item_id)) for o in mychoices]
         )
 
+class RatingForm(forms.Form):
+    def __init__(self, *args, **kwargs):
+        super(RatingForm, self).__init__(*args, **kwargs)
+        self.fields['rating'] = forms.ChoiceField(
+            label = 'Your rating',
+            choices=[(i, str(i)) for i in range(1, 6)]
+        )
+
 
 class WarehouseForm(forms.Form):
     x = forms.IntegerField(label='Number of warehouse you want to create')

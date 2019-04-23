@@ -1,18 +1,45 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
+<head>
     <meta charset="UTF-8">
     <title>Query Result</title>
-  </head>
-  <body>
+</head>
+<body>
     {% block content %}
     <h2>Welcome to MINI Amazon by Xuan and Jie!</h2>
     <h4>The status of your package:</h4>
 
     <p>{{ package.status }}</p>
 
+    {% if ratable %}
+    <br>
+    <p>Please rating your item from 1 to 5: </p>
+    <div class="form-wrapper">
+        <form method="POST" action="" enctype="multipart/form-data">
+            {% csrf_token %}
+            {% for field in form %}
+                <div class="field-wrapper">
+                    {{ field.errors }}
+                    {{ field.label_tag }} {{ field }}
+                    {% if field.help_text %}
+                        <p class="help">{{ field.help_text|safe }}</p>
+                    {% endif %}
+                </div>
+            {% endfor %}
+            <div class="button-wrapper submit">
+                    <p><input type="submit" value="Submit Rate"></p>
+            </div>
+        </form>
+    </div>
+    {% endif %}
+
+    {% if showable %}
+    <br>
+    <p>And your rating for this item is: {{ package.rating }}</p>
+    {% endif %}
+
     <a href="{% url 'webserver:dashboard' user.id %}">Back to dashboard</a>
 
     {% endblock %}
-  </body>
-  </html>
+</body>
+</html>

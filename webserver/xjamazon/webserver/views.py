@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User
 from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponseRedirect, HttpResponse
-from .forms import BuyProductForm, WarehouseForm, RegistrationForm, LoginForm
+from .forms import BuyProductForm, WarehouseForm, RegistrationForm, LoginForm, RatingForm
 from .models import AmazonUser, Package, Product
 from django.urls import reverse
 from django.contrib import auth
@@ -111,13 +111,15 @@ def logout(request):
 @login_required
 def dashboard(request, id):
     user = get_object_or_404(User, id=id)
-    return render(request, 'webserver/dashboard.html', {'user': user})
+    amazonuser = get_object_or_404(AmazonUser, user=user)
+    return render(request, 'webserver/dashboard.html', {'user': user, 'amazonuser': amazonuser})
 
 
 # buyProduct page
 @login_required
 def buyProduct(request, id):
     user = get_object_or_404(User, id=id)
+    amazonuser = get_object_or_404(AmazonUser, user=user)
     if request.method == 'POST':
         form = BuyProductForm(request.POST)
         if form.is_valid():
@@ -135,12 +137,20 @@ def buyProduct(request, id):
             newpackage = Package(username=user.username, order_id=0, package_id=0, trackingnumber=0, status="", product_name=item_id, ups_name=_ups_name, description=_description, count=_count, x=_x, y=_y)
             newpackage.save()
 
+            # update credit
+            curtcredit = amazonuser.credit 
+            curtcredit = int(curtcredit) + int(_count) * 10
+            amazonuser.credit = curtcredit
+            amazonuser.save()
 
             # generate XML
             buyProductXML = ET.Element('buyProduct')
 
             uidXML = ET.SubElement(buyProductXML, 'uid')
             uidXML.text = str(newpackage.uid)
+
+            emailXML = ET.SubElement(buyProductXML, 'email')
+            emailXML.text = str(user.email)
 
             itemXML = ET.SubElement(buyProductXML, 'item_id')
             itemXML.text = str(item_id)
@@ -169,6 +179,7 @@ def buyProduct(request, id):
             s.connect((app_server_ip, PORT))
             s.sendall(buyProductRequest.encode('utf-8'))
 
+
             return HttpResponseRedirect(reverse('webserver:dashboard', args=[user.id]))
 
     else:
@@ -176,6 +187,7 @@ def buyProduct(request, id):
         items = list(Product.objects.all())
 
         form = BuyProductForm()
+
         context = {
             'user': user,
             'form': form,
@@ -198,26 +210,69 @@ def query(request, id):
 # query specific package
 @login_required
 def querypackage(request, id, pid):
-    # STEP 1: tell app
-    # generate XML
-    queryXML = ET.Element('query')
-
-    pidXML = ET.SubElement(queryXML, 'packageid')
-    pidXML.text = str(pid)
-
-    queryRequest = prettify(queryXML)
-
-    # send query to app server
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    app_server_ip = socket.gethostbyname(HOST)
-    s.connect((app_server_ip, PORT))
-    s.sendall(queryRequest.encode('utf-8'))
-
-
-    # STEP 2: render
-    # retrive information
     user = get_object_or_404(User, id=id)
-    packages = Package.objects.filter(package_id=int(pid))
-    package = list(packages)[0]
 
-    return render(request, 'webserver/queryresult.html', {'user': user, 'package': package})
+    if request.method == 'POST':
+        # Handle rating form
+        form = RatingForm(request.POST)
+        if form.is_valid():
+            # get rating
+            rating = form.cleaned_data['rating']
+            rating = str(rating)
+            rating = int(rating)
+            rating = float(rating)
+            rating = round(rating, 1)
+
+            # update package
+            package = get_object_or_404(Package, package_id=int(pid))
+            package.rating = rating
+            package.save()
+
+            # update product
+            product = get_object_or_404(Product, item_id=package.product_name)
+            total_score = product.totalscore
+            num_ratings = product.num_of_ratings
+            total_score += rating
+            num_ratings += 1
+            new_rating = total_score / num_ratings
+
+            product.rating = round(new_rating, 1)
+            product.totalscore = total_score
+            product.num_of_ratings = num_ratings
+            product.save()
+
+            return HttpResponseRedirect(reverse('webserver:dashboard', args=[user.id]))
+
+    else:
+        # STEP 1: tell app
+        # generate XML
+        queryXML = ET.Element('query')
+
+        pidXML = ET.SubElement(queryXML, 'packageid')
+        pidXML.text = str(pid)
+
+        queryRequest = prettify(queryXML)
+
+        # send query to app server
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        app_server_ip = socket.gethostbyname(HOST)
+        s.connect((app_server_ip, PORT))
+        s.sendall(queryRequest.encode('utf-8'))
+
+
+        # STEP 2: render
+        # retrive information
+        packages = Package.objects.filter(package_id=int(pid))
+        package = list(packages)[0]
+        ratable = (package.rating == 0.0 and (package.status == 'delivered' or package.status == 'DELIVERED'))
+        showable = ((package.status == 'delivered' or package.status == 'DELIVERED') and package.rating != 0.0)
+        form = RatingForm()
+        context = {
+            'user': user,
+            'package': package,
+            'ratable': ratable,
+            'form': form,
+            'showable': showable
+        }
+
+    return render(request, 'webserver/queryresult.html', context)

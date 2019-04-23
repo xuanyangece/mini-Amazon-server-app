@@ -1,17 +1,31 @@
+{% load static %}
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>Homepage</title>
+    <link rel="stylesheet" type="text/css" href="{% static 'webserver/index.css' %}">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
 </head>
 <body>
+  <div class="content">
     {% block content %}
-    <h1>Welcome to MINI Amazon by Xuan and Jie!</h1>
-    <h3>Amazon Admin</h3>
-    <a href="{% url 'webserver:createWarehouse' %}">Create new warehouse in World.</a>
-    <h3>Amazon User</h3>
-    <a href="{% url 'webserver:register' %}">Register a new user</a>
-    <a href="{% url 'webserver:login' %}">Login as existing user</a>
+    <div class="jumbotron">
+            <h1 class="display-4">Welcome to MINI Amazon by Xuan and Jie!!</h1>
+            <p class="lead">This is a simple hero unit, a simple jumbotron-style component for calling extra attention to featured content or information.</p>
+            <hr class="my-4">
+            <p>For admin, you need to set up warehouses and connect to world.</p>
+            <a class="btn btn btn-secondary btn-lg" href="{% url 'webserver:createWarehouse' %}" role="button">Create new warehouse in World.</a>
+            <hr class="my-4">
+            <p>For users, you can register or login to use our app.</p>
+            <a class="btn btn btn-secondary btn-sm" href="{% url 'webserver:register' %}" role="button">Register</a>
+            or
+            <a class="btn btn btn-secondary btn-sm" href="{% url 'webserver:login' %}" role="button">Login</a>
+          </div>
+    <h1></h1>
     {% endblock %}
+  </div>
 </body>
 </html>

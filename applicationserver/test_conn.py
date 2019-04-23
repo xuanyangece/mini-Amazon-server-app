@@ -28,7 +28,7 @@ if __name__ == '__main__':
 
     pakid = 1
     cursor = conn.cursor()
-    #sql = "UPDATE WEBSERVER_PACKAGE SET STATUS = 'Packing' WHERE PACKAGE_ID = '" +  str(pakid) + "';"
+    sql = "UPDATE WEBSERVER_PACKAGE SET STATUS = 'Packing' WHERE PACKAGE_ID = '" +  str(pakid) + "';"
     #cursor.execute(sql)
 
     item_id = 1
@@ -40,6 +40,7 @@ if __name__ == '__main__':
     try:
         cursor.execute(sql2)
         result = cursor.fetchall()
+        print(result[0][11])
         for row in result:
             Whid = row[0]
             x = row[1]

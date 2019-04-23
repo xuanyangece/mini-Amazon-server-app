@@ -9,7 +9,10 @@ import xml.sax
 import select
 import psycopg2
 from random import randint
-#import os
+import smtplib
+from email.mime.text import MIMEText
+from email.header import Header
+
 
 
 from google.protobuf.internal.decoder import _DecodeVarint32
@@ -248,7 +251,9 @@ def recvUPS(s,conn):
             pkg = uni_int(pkgids[i])
             trknum = uni_int(trknums[i])
             package_tcknumMap[pkg] = trknum
-
+            sqltrackingnumber = "UPDATE WEBSERVER_PACKAGE SET TRACKINGNUMBER = '" + str(trknum) + "' WHERE PACKAGE_ID = '" + str(pkg) + "';"
+            cursor.execute(sqltrackingnumber)
+            conn.commit()
         #flag to prevent race
         gdFlag = True
 
@@ -409,7 +414,7 @@ def  ack_to_world(s, ack):
 
 #used to send and handle commands and response to/from world
 def worldServer(s,conn):
-    timeout = 1
+    timeout = 3
     global seqnum
     global ship_id
     global truck_packageMap
@@ -430,7 +435,7 @@ def worldServer(s,conn):
                 one time 
                 one time     
                 '''
-                WorldMessage.pop(key)
+                #WorldMessage.pop(key)
 
         worldResponse = amazon_pb2.AResponses()
         msg =  recv_tmessage(s, timeout)
@@ -472,9 +477,10 @@ def worldServer(s,conn):
                     print("Product description: " + str(product.description))
                     print("Product count: " + str(product.count))
 
-                    sqlSelect = "SELECT * FROM WEBSERVER_PACKAGE WHERE PRODUCT_NAME = '" + str(product.id) + "' AND COUNT = '" + str(product.count) + "' AND DESCRIPTION = '" + str(product.description) + "' AND PACKAGE_ID > 0 ORDER BY ORDER_ID ASC;"
+                    sqlSelect = "SELECT * FROM WEBSERVER_PACKAGE WHERE PRODUCT_NAME = '" + str(product.id) + "' AND COUNT = '" + str(product.count) + "' AND DESCRIPTION = '" + str(product.description) + "' AND PACKAGE_ID = 0 ORDER BY ORDER_ID ASC;"
                     cursor.execute(sqlSelect)
                     result = cursor.fetchall()
+
                     uid =  result[0][11]
                     sqlupdate = "UPDATE WEBSERVER_PACKAGE SET PACKAGE_ID = '" + str(apack.shipid) + "' WHERE UID = '" + str(uid) + "';"
                     cursor.execute(sqlupdate)
@@ -563,6 +569,11 @@ def amazonWeb(listen_socket_web, conn):
     global seqnum
     global order_id
 
+    from_addr = 'mynewubber@gmail.com'
+    server = smtplib.SMTP('smtp.gmail.com', 587)
+    server.starttls()
+    server.login(from_addr, r'dengliwen1997')
+
     cursor = conn.cursor()
     while True:
         client_connection, client_address = listen_socket_web.accept()
@@ -582,16 +593,29 @@ def amazonWeb(listen_socket_web, conn):
             buymore.seqnum = seqnum
             seqnum = seqnum + 1
             product = buymore.things.add()
+            email = uni_string(Handler.email)
             product.id = uni_int(Handler.itemid)
             product.description = uni_string(Handler.description)
             product.count = uni_int(Handler.count)
             WorldMessage[buymore.seqnum] = s_command
             Handler.order_id = order_id
             sql = "UPDATE WEBSERVER_PACKAGE SET ORDER_ID = '" + str(order_id) + "' WHERE UID = '" + str(uni_string(Handler.uid)) + "';"
-
             cursor.execute(sql)
+            conn.commit()
             order_id = order_id + 1
             orderList.append(Handler)
+            message = MIMEText('Thank you for purchasing on miniAmazon, and your order has been placed. You can check your package status anytime on our website \n\n\n\n\n   miniAmazon Team', 'plain', 'utf-8')
+            message['From'] = Header("miniAmazon", 'utf-8')
+            message['To'] = Header("Customer", 'utf-8')
+
+            subject = 'Your Order Confirmation!'
+            message['Subject'] = Header(subject, 'utf-8')
+            try:
+                server.sendmail(from_addr, [email], message.as_string())
+                print("hahahah")
+            except smtplib.SMTPException:
+                print("NONONO")
+
 
 
 
@@ -625,6 +649,7 @@ class web_requestHandler(ContentHandler) :
         self.ship_id = ""
         self.uid = ""
         self.packageid = ""
+        self.email = ""
 
 
     def startElement(self, tag, attributes):
@@ -663,6 +688,8 @@ class web_requestHandler(ContentHandler) :
             print(self.uid)
         elif self.CurrentData == "packageid":
             print(self.packageid)
+        elif self.CurrentData == "email":
+            print(self.email)
         self.CurrentData = ""
 
     def characters(self, content):
@@ -686,6 +713,8 @@ class web_requestHandler(ContentHandler) :
             self.uid =  content
         elif self.CurrentData == "packageid":
             self.packageid =  content
+        elif self.CurrentData == "email":
+            self.email = content
 
 
 #parsing the Worldid xml message from ups
@@ -705,7 +734,6 @@ class WorldIDHandler(ContentHandler):
 
 if __name__ == '__main__':
 
-    global warehouse_num
 
     #urlparse.uses_netloc.append("postgres")
     #url = urlparse.urlparse(os.environ["postgres://scmiwlgi:TFP9YRYa1EmcciYEEBqsAsrSq9O"])
@@ -766,7 +794,7 @@ if __name__ == '__main__':
         s_command.worldid = int(wid)
         s_command.isAmazon = True
         warehouse_num = uni_int(Handler.address_X)
-        for i in range(1, uni_int(Handler.address_X)):
+        for i in range(1, uni_int(Handler.address_X)+1):
             warehouse = s_command.initwh.add()
             warehouse.id = i
             warehouse.x = i

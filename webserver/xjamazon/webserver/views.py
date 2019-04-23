@@ -224,7 +224,10 @@ def querypackage(request, id, pid):
             total_score += rating
             num_ratings += 1
             new_rating = total_score / num_ratings
+            
             product.rating = round(new_rating, 1)
+            product.totalscore = total_score
+            product.num_of_ratings = num_ratings
             product.save()
 
             return HttpResponseRedirect(reverse('webserver:dashboard', args=[user.id]))

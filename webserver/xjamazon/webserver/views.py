@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User
 from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponseRedirect, HttpResponse
-from .forms import BuyProductForm, WarehouseForm, RegistrationForm, LoginForm, RatingForm
+from .forms import BuyProductForm, WarehouseForm, RegistrationForm, LoginForm, RatingForm, SearchProductForm
 from .models import AmazonUser, Package, Product
 from django.urls import reverse
 from django.contrib import auth
@@ -16,6 +16,7 @@ import socket
 # modify according to app server
 HOST, PORT = "vcm-8965.vm.duke.edu", 65432
 
+
 # helper function for prettify XML from https://stackoverflow.com/questions/17402323/use-xml-etree-elementtree-to-print-nicely-formatted-xml-files
 def prettify(elem):
     """Return a pretty-printed XML string for the Element.
@@ -27,6 +28,21 @@ def prettify(elem):
 
 # homepage
 def homepage(request):
+    return render(request, 'webserver/index.html', {})
+
+# close world, tell UPS close connection
+def close(request):
+    # generate XML
+    closeXML = ET.Element('closeWorld')
+
+    closerequest = prettify(closeXML)
+
+    # send close request to app server
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    app_server_ip = socket.gethostbyname(HOST)
+    s.connect((app_server_ip, PORT))
+    s.sendall(closerequest.encode('utf-8'))
+
     return render(request, 'webserver/index.html', {})
 
 
@@ -112,7 +128,33 @@ def logout(request):
 def dashboard(request, id):
     user = get_object_or_404(User, id=id)
     amazonuser = get_object_or_404(AmazonUser, user=user)
-    return render(request, 'webserver/dashboard.html', {'user': user, 'amazonuser': amazonuser})
+    isVip = amazonuser.credit > 200
+    return render(request, 'webserver/dashboard.html', {'user': user, 'amazonuser': amazonuser, 'isVip': isVip})
+
+
+# search product according to description
+@login_required
+def searchProduct(request, id):
+    user = get_object_or_404(User, id=id)
+    if request.method == 'POST':
+        form = SearchProductForm(request.POST)
+        if form.is_valid():
+            part = form.cleaned_data['description']
+            part = str(part)
+
+            items = list(Product.objects.all())
+            results = []
+            for item in items:
+                curt = str(item.description)
+                if curt.find(part) != -1:
+                    results.append(item)
+            
+            return render(request, 'webserver/searchResult.html', {'form': form, 'user': user, 'results': results})
+
+    else:
+        form = SearchProductForm()
+    
+    return render(request, 'webserver/search.html', {'form': form})
 
 
 # buyProduct page
@@ -139,12 +181,20 @@ def buyProduct(request, id):
 
             # update credit
             curtcredit = amazonuser.credit 
+            isVip = int(curtcredit) > 200
             curtcredit = int(curtcredit) + int(_count) * 10
             amazonuser.credit = curtcredit
             amazonuser.save()
 
+
             # generate XML
             buyProductXML = ET.Element('buyProduct')
+
+            vipXML = ET.SubElement(buyProductXML, 'vip')
+            if isVip:
+                vipXML.text = 'yes'
+            else:
+                vipXML.text = 'no'
 
             uidXML = ET.SubElement(buyProductXML, 'uid')
             uidXML.text = str(newpackage.uid)

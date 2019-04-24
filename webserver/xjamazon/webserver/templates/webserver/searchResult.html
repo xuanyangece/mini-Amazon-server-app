@@ -1,0 +1,36 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Search Result</title>
+    <link rel="stylesheet" type="text/css" href="{% static 'webserver/cwh.css' %}">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+</head>
+<body>
+    <div class="content">
+        {% block content %}
+        <h2>Welcome to MINI Amazon by Xuan and Jie!</h2>
+        <h4>Here's your search result</h4>
+
+        {% if results|length > 0 %}
+        <ul>
+            {% for result in results %}
+            <li>
+                <p>Item ID: {{ result.item_id }}</p>
+                <p>Item Description: {{ result.description }}</p>
+                <p>Item Rating: {{ result.rating }}/5.0</p>
+                <br>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <h6>There no valid item that applies to your description.</h6>
+        {% endif %}
+        <a href="{% url 'webserver:dashboard' user.id %}">Back to dashboard</a>
+        {% endblock %}
+    </div>
+</body>
+</html>

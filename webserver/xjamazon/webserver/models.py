@@ -43,3 +43,4 @@ class Package(models.Model):
     y = models.IntegerField(default=1)
     date = models.DateTimeField(default=datetime.now, blank=True, editable=False)
     rating = models.FloatField(default=0.0)
+    returned = models.BooleanField(default=False)

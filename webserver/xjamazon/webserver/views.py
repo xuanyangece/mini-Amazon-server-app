@@ -154,7 +154,7 @@ def searchProduct(request, id):
     else:
         form = SearchProductForm()
     
-    return render(request, 'webserver/search.html', {'form': form})
+    return render(request, 'webserver/search.html', {'form': form, 'user': user})
 
 
 # buyProduct page
@@ -316,13 +316,31 @@ def querypackage(request, id, pid):
         package = list(packages)[0]
         ratable = (package.rating == 0.0 and (package.status == 'delivered' or package.status == 'DELIVERED'))
         showable = ((package.status == 'delivered' or package.status == 'DELIVERED') and package.rating != 0.0)
+        returnable = (package.status == 'delivered' or package.status == 'DELIVERED') and package.returned == False
         form = RatingForm()
         context = {
             'user': user,
             'package': package,
             'ratable': ratable,
             'form': form,
-            'showable': showable
+            'showable': showable,
+            'returnable': returnable
         }
 
     return render(request, 'webserver/queryresult.html', context)
+
+# return and refund product, credit will be deducted
+def returnProduct(request, id, pid):
+    user = get_object_or_404(User, id=id)
+    amazonuser = get_object_or_404(AmazonUser, user=user)
+
+    # change refund
+    package = get_object_or_404(Package, package_id=int(pid))
+    package.returned = True
+    package.save()
+
+    # change user credit
+    amazonuser.credit -= package.count * 10
+    amazonuser.save()
+
+    return HttpResponseRedirect(reverse('webserver:dashboard', args=[user.id]))

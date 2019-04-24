@@ -4,6 +4,8 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from .models import Product
 import re
 
+class SearchProductForm(forms.Form):
+    description = forms.CharField(label='Search from description', max_length=200)
 
 class BuyProductForm(forms.Form):
     ups_name = forms.CharField(label='UPS name', max_length=30)

@@ -1,0 +1,40 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>View Feedback</title>
+    <link rel="stylesheet" type="text/css" href="{% static 'webserver/cwh.css' %}">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+</head>
+<body>
+    {% block content %}
+    <h2>Welcome to MINI Amazon by Xuan and Jie!</h2>
+
+    {% if feedbacks|length > 0 %}
+    <h4>There're feedbacks from user:</h4>
+    <ul>
+        {% csrf_token %}
+        {% for fb in feedbacks %}
+        <li>
+            <p>Username: {{ fb.username }}</p>
+            <p>Feedback: {{ fb.comment }}</p>
+            {% if fb.reward %}
+            <a href="{% url 'webserver:rewardfb' fb.uid %}">Reward!</a>
+            {% else %}
+            <p>* This one has already been rewarded</p>
+            {% endif %}
+            <br>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <h4>There's currently no comment yet.</h4>
+    {% endif %}
+
+
+    {% endblock %}
+</body>
+</html>

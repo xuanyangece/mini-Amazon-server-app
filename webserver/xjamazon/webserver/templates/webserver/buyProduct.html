@@ -15,7 +15,7 @@
     <h2>Welcome to MINI Amazon by Xuan and Jie!</h2>
     <h4>Buy product as user</h4>
     
-
+    {% csrf_token %}
     {% if items|length > 0 %}
     <ul>
         <p>Here are the options you have:</p>

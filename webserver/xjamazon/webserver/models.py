@@ -44,3 +44,9 @@ class Package(models.Model):
     date = models.DateTimeField(default=datetime.now, blank=True, editable=False)
     rating = models.FloatField(default=0.0)
     returned = models.BooleanField(default=False)
+
+class Feedback(models.Model):
+    uid = models.IntegerField(default=0)
+    username = models.CharField(max_length=30)
+    comment = models.CharField(max_length=200)
+    reward = models.BooleanField(default=True)

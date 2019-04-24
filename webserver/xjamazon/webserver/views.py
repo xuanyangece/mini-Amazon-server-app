@@ -2,7 +2,7 @@ from django.contrib.auth.models import User
 from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponseRedirect, HttpResponse
 from .forms import BuyProductForm, WarehouseForm, RegistrationForm, LoginForm, RatingForm, SearchProductForm
-from .models import AmazonUser, Package, Product
+from .models import AmazonUser, Package, Product, Feedback
 from django.urls import reverse
 from django.contrib import auth
 from django.contrib.auth.decorators import login_required
@@ -330,6 +330,7 @@ def querypackage(request, id, pid):
     return render(request, 'webserver/queryresult.html', context)
 
 # return and refund product, credit will be deducted
+@login_required
 def returnProduct(request, id, pid):
     user = get_object_or_404(User, id=id)
     amazonuser = get_object_or_404(AmazonUser, user=user)
@@ -344,3 +345,44 @@ def returnProduct(request, id, pid):
     amazonuser.save()
 
     return HttpResponseRedirect(reverse('webserver:dashboard', args=[user.id]))
+
+# provide feedback for Amazon admin
+@login_required
+def offerfb(request, id):
+    user = get_object_or_404(User, id=id)
+    if request.method == 'POST':
+        form = SearchProductForm(request.POST)
+        if form.is_valid():
+            comment = form.cleaned_data['description']
+            comment = str(comment)
+
+            # update Feedback db
+            newfb = Feedback(uid=id, username=user.username, comment=comment)
+            newfb.save()
+            
+            return HttpResponseRedirect(reverse('webserver:dashboard', args=[user.id]))
+
+    else:
+        form = SearchProductForm()
+
+    return render(request, 'webserver/queryresult.html', {'user': user, 'form': form})
+
+# view feedbacks
+def viewfb(request):
+    feedbacks = list(Feedback.objects.all())
+    return render(request, 'webserver/viewfb.html', {'feedbacks': feedbacks})
+
+# reward feedback
+def rewardfb(request, id):
+    user = get_object_or_404(User, id=id)
+    amazonuser = get_object_or_404(AmazonUser, user=user)
+
+    # update credit
+    amazonuser.credit += 30
+    amazonuser.save()
+
+    feedback = get_object_or_404(Feedback, uid=id)
+    feedback.reward = False
+    feedback.save()
+
+    return render(request, 'webserver/index.html', {})

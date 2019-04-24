@@ -35,6 +35,8 @@
     <a href="{% url 'webserver:buyProduct' user.id %}">Buy some product</a>
     <a href="{% url 'webserver:query' user.id %}">Check all your packages</a>
     <a href="{% url 'webserver:logout' %}">Log out</a>
+    <br>
+    <a href="{% url 'webserver:offerfb' user.id %}">Give us Feedback!</a>
     {% endblock %}
 </body>
 </html>
